@@ -1,0 +1,29 @@
+{
+    "manifest_version": 2.0,
+    "id": "milestone_camera_status",
+    "type": "widget",
+    "name": "Milestone camera status",
+    "namespace": "MilestoneCameraStatus",
+    "version": "1.0",
+    "author": "Custom",
+    "description": "Summary tiles + sortable table of cameras in a non-OK state, sourced from milestone.cam.status[*] items.",
+    "actions": {
+        "widget.milestone_camera_status.view": {
+            "class": "WidgetView"
+        }
+    },
+    "widget": {
+        "name": "Milestone camera status",
+        "size": {
+            "width": 36,
+            "height": 8
+        },
+        "form_class": "WidgetForm",
+        "js_class": "WidgetMilestoneCameraStatus",
+        "refresh_rate": 60
+    },
+    "assets": {
+        "css": ["widget.css"],
+        "js": ["class.widget.js"]
+    }
+}

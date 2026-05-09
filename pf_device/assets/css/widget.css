@@ -1,0 +1,302 @@
+/* ── PacketFence Device Lookup Widget ────────────────────────────────────── */
+
+.pf-widget {
+	padding: 6px 8px;
+	color: #cbd5e1;
+	font-size: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	height: 100%;
+	box-sizing: border-box;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.pf-header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid #1e293b;
+}
+.pf-header__title {
+	font-weight: 600;
+	color: #e2e8f0;
+	font-size: 13px;
+}
+.pf-header__port {
+	color: #94a3b8;
+}
+.pf-header__member {
+	font-size: 11px;
+	color: #64748b;
+}
+.pf-header__ip {
+	margin-left: auto;
+	font-family: ui-monospace, "SF Mono", Menlo, monospace;
+	color: #64748b;
+	font-size: 11px;
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.pf-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 30px 10px;
+	color: #64748b;
+	text-align: center;
+	flex: 1;
+}
+.pf-empty__icon {
+	font-size: 32px;
+	margin-bottom: 8px;
+	opacity: 0.6;
+}
+.pf-empty__msg {
+	font-size: 13px;
+	color: #94a3b8;
+	margin-bottom: 4px;
+}
+.pf-empty__hint {
+	font-size: 11px;
+}
+
+/* ── Error ────────────────────────────────────────────────────────────────── */
+.pf-error {
+	padding: 10px 12px;
+	background: rgba(127, 29, 29, 0.3);
+	border: 1px solid rgba(248, 113, 113, 0.4);
+	border-radius: 4px;
+	color: #fca5a5;
+	font-size: 12px;
+}
+
+/* ── Device cards ────────────────────────────────────────────────────────── */
+.pf-cards {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	overflow-y: auto;
+	flex: 1;
+	min-height: 0;
+}
+
+.pf-card {
+	background: #0f172a;
+	border: 1px solid #1e293b;
+	border-radius: 4px;
+	padding: 8px 10px;
+}
+
+.pf-card__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 6px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid #1e293b;
+}
+
+.pf-card__mac {
+	font-family: ui-monospace, "SF Mono", Menlo, monospace;
+	font-weight: 600;
+	color: #e2e8f0;
+	font-size: 12px;
+}
+
+.pf-card__pills {
+	display: inline-flex;
+	gap: 4px;
+}
+
+.pf-status, .pf-online {
+	display: inline-block;
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-size: 10px;
+	text-transform: uppercase;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+}
+.pf-status--ok        { background: rgba(20, 83, 45, 0.5);   color: #4ade80; }
+.pf-status--warn      { background: rgba(113, 63, 18, 0.5);  color: #facc15; }
+.pf-status--pending   { background: rgba(30, 58, 138, 0.4);  color: #60a5fa; }
+.pf-status--unknown   { background: rgba(30, 41, 59, 0.6);   color: #94a3b8; }
+.pf-online--on        { background: rgba(20, 83, 45, 0.5);   color: #4ade80; }
+.pf-online--off       { background: rgba(30, 41, 59, 0.6);   color: #94a3b8; }
+.pf-online--unknown   { background: rgba(30, 41, 59, 0.4);   color: #64748b; }
+
+/* ── Detail grid ─────────────────────────────────────────────────────────── */
+.pf-card__details {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+	gap: 4px 10px;
+	margin-bottom: 6px;
+}
+
+.pf-detail {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	min-width: 0;
+}
+.pf-detail__label {
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: #64748b;
+}
+.pf-detail__value {
+	font-size: 12px;
+	color: #e2e8f0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.pf-mono {
+	font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* ── Security events ─────────────────────────────────────────────────────── */
+.pf-card__events {
+	margin-top: 6px;
+	padding: 6px 8px;
+	background: rgba(127, 29, 29, 0.25);
+	border: 1px solid rgba(248, 113, 113, 0.35);
+	border-radius: 3px;
+}
+.pf-events-label {
+	display: block;
+	font-weight: 600;
+	color: #fca5a5;
+	font-size: 11px;
+	margin-bottom: 4px;
+}
+.pf-events-list {
+	margin: 0;
+	padding-left: 18px;
+	font-size: 11px;
+	color: #fecaca;
+}
+.pf-events-list li { line-height: 1.3; }
+
+/* ── Actions ─────────────────────────────────────────────────────────────── */
+.pf-card__actions {
+	margin-top: 6px;
+	padding-top: 6px;
+	border-top: 1px solid #1e293b;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+.pf-action {
+	display: inline-block;
+	padding: 3px 8px;
+	background: transparent;
+	border: 1px solid #334155;
+	border-radius: 3px;
+	color: #94a3b8;
+	font-size: 11px;
+	line-height: 1.4;
+	white-space: nowrap;
+	text-decoration: none;
+	transition: all 0.12s;
+}
+.pf-action:hover {
+	color: #60a5fa;
+	border-color: #60a5fa;
+	background: rgba(96, 165, 250, 0.08);
+}
+button.pf-action {
+	cursor: pointer;
+	font-family: inherit;
+}
+button.pf-action:disabled {
+	opacity: 0.5;
+	cursor: wait;
+}
+.pf-action--restart:hover {
+	color: #fca5a5;
+	border-color: #fca5a5;
+	background: rgba(252, 165, 165, 0.08);
+}
+.pf-action--cyclepoe:hover {
+	color: #fbbf24;
+	border-color: #fbbf24;
+	background: rgba(251, 191, 36, 0.08);
+}
+.pf-action-status {
+	font-size: 11px;
+	color: #94a3b8;
+	align-self: center;
+	margin-left: auto;
+}
+.pf-action-status--pending { color: #94a3b8; }
+.pf-action-status--ok      { color: #4ade80; }
+.pf-action-status--err     { color: #f87171; }
+
+/* ── Debug panel ─────────────────────────────────────────────────────────── */
+.pf-dbg {
+	margin-top: 8px;
+	padding: 4px 6px;
+	background: #0b1220;
+	border: 1px solid #1e293b;
+	border-radius: 3px;
+	font-size: 10px;
+	color: #94a3b8;
+}
+.pf-dbg summary { cursor: pointer; padding: 2px 4px; font-weight: 600; }
+.pf-dbg-body { margin-top: 4px; overflow-x: auto; }
+.pf-dbg-tbl { border-collapse: collapse; width: 100%; }
+.pf-dbg-tbl th, .pf-dbg-tbl td {
+	padding: 2px 6px;
+	border: 1px solid #1e293b;
+	text-align: left;
+	word-break: break-all;
+	font-family: ui-monospace, "SF Mono", Menlo, monospace;
+	font-size: 10px;
+}
+.pf-dbg-tbl th { background: #111827; color: #cbd5e1; font-weight: 600; }
+
+/* ── MAC list item age indicator ─────────────────────────────────────────── */
+.pf-header__count {
+	padding: 2px 6px;
+	background: #1e293b;
+	border-radius: 3px;
+	font-size: 10px;
+	color: #94a3b8;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+.pf-header__age {
+	margin-left: auto;
+	font-size: 10px;
+	color: #64748b;
+	font-style: italic;
+}
+
+/* ── Card state: MAC seen on switch but not known to PacketFence ──────── */
+.pf-card--unknown {
+	border-style: dashed;
+	opacity: 0.85;
+}
+
+/* ── IP source badge (PF vs DHCP) ────────────────────────────────────────── */
+.pf-ip-src {
+	display: inline-block;
+	margin-left: 5px;
+	padding: 0 4px;
+	font-size: 9px;
+	font-weight: 600;
+	border-radius: 2px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	vertical-align: 1px;
+	font-family: system-ui, sans-serif;  /* reset from pf-mono */
+}
+.pf-ip-src--pf   { background: rgba(96,165,250,0.15); color: #60a5fa; }
+.pf-ip-src--dhcp { background: rgba(250,204,21,0.15); color: #facc15; }

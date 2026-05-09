@@ -1,0 +1,32 @@
+{
+    "manifest_version": 2.0,
+    "id": "pf_device",
+    "type": "widget",
+    "name": "PacketFence device",
+    "namespace": "PfDevice",
+    "version": "1.0",
+    "author": "Custom",
+    "description": "Unified PacketFence device card. Two source modes: 'event' (listens for pf:deviceSelected, mcs:cameraSelected, or sw:portSelected — single device card) or 'host_items' (override-host + MAC-list item — multi-device cards for a switch port). Subsumes the original packetfence and milestone_camera_packetfence widgets.",
+    "actions": {
+        "widget.pf_device.view": {
+            "class": "WidgetView"
+        },
+        "widget.pf_device.action": {
+            "class": "WidgetAction"
+        }
+    },
+    "widget": {
+        "name": "PacketFence device",
+        "size": {
+            "width": 12,
+            "height": 4
+        },
+        "form_class": "WidgetForm",
+        "js_class": "WidgetPfDevice",
+        "refresh_rate": 60
+    },
+    "assets": {
+        "css": ["widget.css"],
+        "js": ["class.widget.js"]
+    }
+}

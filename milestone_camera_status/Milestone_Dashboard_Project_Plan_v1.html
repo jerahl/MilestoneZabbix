@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Milestone Dashboard — Project Plan v1.0</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --bg:       #0d1117;
+  --bg2:      #161b22;
+  --bg3:      #1c2128;
+  --line:     #30363d;
+  --line2:    #21262d;
+  --fg:       #e6edf3;
+  --fg2:      #8b949e;
+  --fg3:      #484f58;
+  --acc:      #d92929;
+  --zbx:      #4d7cc7;
+  --zbx2:     #0d1f3c;
+  --zbx3:     #1a3a6e;
+  --ms:       #06b6d4;     /* Milestone teal */
+  --ms2:      #0d2a30;
+  --ms3:      #1a4a52;
+  --cam:      #fb923c;     /* Camera direct (orange) */
+  --cam2:     #2a1208;
+  --cam3:     #4a2516;
+  --agent:    #60a5fa;     /* Agent on DVR (windows blue) */
+  --agent2:   #0d2030;
+  --agent3:   #1a3a52;
+  --m0:       #7c6ff7;
+  --m1:       #0ea5e9;
+  --m2:       #22c55e;
+  --m3:       #f59e0b;
+  --m4:       #ef4444;
+  --m5:       #a855f7;
+  --ok:       #22c55e;
+  --ok2:      #0d2a1a;
+  --ok3:      #1a4a2a;
+  --warn:     #f59e0b;
+  --warn2:    #2a1f0d;
+  --warn3:    #4a3a1a;
+  --err:      #ef4444;
+  --err2:     #2a0d0d;
+  --err3:     #4a1a1a;
+  --sans:     'IBM Plex Sans', sans-serif;
+  --mono:     'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--bg); color: var(--fg); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+/* ── Header ── */
+.header { border-bottom: 1px solid var(--line); padding: 28px 40px 22px; display: flex; align-items: flex-start; gap: 32px; }
+.header-left { flex: 1; }
+.brand { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--acc); margin-bottom: 8px; }
+h1 { font-size: 22px; font-weight: 600; color: var(--fg); letter-spacing: -.3px; line-height: 1.2; }
+.subtitle { font-size: 13px; color: var(--fg2); margin-top: 5px; }
+.header-stats { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; padding-top: 4px; }
+.stat-row { font-family: var(--mono); font-size: 11px; color: var(--fg2); display: flex; gap: 10px; }
+.stat-val { color: var(--fg); font-weight: 600; }
+#progress-wrap { width: 200px; height: 4px; background: var(--line); border-radius: 2px; margin-top: 4px; }
+#progress-bar { height: 100%; border-radius: 2px; background: var(--ok); transition: width .5s ease; }
+
+/* ── Change notice ── */
+.change-banner { margin: 20px 40px; border: 1px solid var(--warn3); background: var(--warn2); border-radius: 6px; padding: 14px 18px; font-size: 13px; color: var(--fg2); }
+.change-banner strong { color: var(--warn); }
+.change-banner ul { padding-left: 20px; margin-top: 8px; line-height: 2; }
+.change-banner li { font-size: 12.5px; }
+
+/* ── Timeline ── */
+.timeline-wrap { padding: 18px 40px; border-bottom: 1px solid var(--line2); }
+.tl-label { font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--fg3); margin-bottom: 8px; }
+.tl-bar { display: flex; height: 22px; border-radius: 4px; overflow: hidden; gap: 2px; }
+.tl-seg { display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 9px; font-weight: 600; color: rgba(255,255,255,.8); letter-spacing: .05em; }
+.tl-seg.done-seg { opacity: .5; position: relative; }
+.tl-seg.done-seg::after { content: '✓'; margin-left: 4px; }
+.tl-weeks { display: flex; margin-top: 4px; }
+.tl-wk { flex: 1; font-family: var(--mono); font-size: 9px; color: var(--fg3); text-align: center; }
+
+/* ── Legend ── */
+.legend { display: flex; flex-wrap: wrap; gap: 16px; padding: 14px 40px; border-bottom: 1px solid var(--line2); align-items: center; }
+.leg-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--fg2); }
+.leg-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.t-reuse  { background: #0d2a3c; border: 1px solid #1a4a6e; }
+.t-adapt  { background: #1f2a0d; border: 1px solid #3a4a1a; }
+.t-ms     { background: var(--ms2); border: 1px solid var(--ms3); }
+.t-cam    { background: var(--cam2); border: 1px solid var(--cam3); }
+.t-agent  { background: var(--agent2); border: 1px solid var(--agent3); }
+.t-new    { background: #2a1f0d; border: 1px solid #4a3a1a; }
+.t-minor  { background: #2a0d2a; border: 1px solid #4a1a4a; }
+.t-native { background: #1f0d2a; border: 1px solid #3a1a4a; }
+.t-done   { background: #0d2a1a; border: 1px solid var(--ok3); }
+
+/* ── Main content ── */
+.main { padding: 24px 40px 60px; display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Milestone ── */
+.milestone { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.milestone.ms-complete { border-color: var(--ok3); }
+.milestone.ms-partial  { border-color: var(--warn3); }
+.ms-head { display: flex; align-items: center; gap: 0; padding: 13px 18px; cursor: pointer; user-select: none; background: var(--bg2); transition: background .1s; }
+.ms-head:hover { background: var(--bg3); }
+.ms-head.open { }
+.ms-accent { width: 4px; height: 36px; border-radius: 2px; flex-shrink: 0; margin-right: 14px; }
+.ms-info { flex: 1; }
+.ms-title { font-size: 14px; font-weight: 600; color: var(--fg); line-height: 1.2; display: flex; align-items: center; gap: 10px; }
+.ms-badge { font-family: var(--mono); font-size: 9px; font-weight: 600; padding: 1px 7px; border-radius: 10px; }
+.ms-badge.done { background: var(--ok2); color: var(--ok); border: 1px solid var(--ok3); }
+.ms-badge.partial { background: var(--warn2); color: var(--warn); border: 1px solid var(--warn3); }
+.ms-badge.active { background: #0d1f3c; color: #7dd3fc; border: 1px solid #1a3a6e; }
+.ms-badge.blocked { background: var(--err2); color: var(--err); border: 1px solid var(--err3); }
+.ms-meta { font-size: 12px; color: var(--fg2); margin-top: 2px; }
+.ms-right { display: flex; align-items: center; gap: 10px; }
+.ms-pill { font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; color: rgba(255,255,255,.85); }
+.ms-count { font-family: var(--mono); font-size: 11px; color: var(--fg3); }
+.ms-chevron { font-size: 10px; color: var(--fg3); transition: transform .2s; width: 12px; text-align: center; }
+.ms-chevron.open { transform: rotate(90deg); }
+.ms-progress { height: 3px; background: var(--line2); border-top: 1px solid var(--line); }
+.ms-progress-bar { height: 100%; border-radius: 0; transition: width .3s ease; }
+
+/* ── Tasks ── */
+.tasks { display: none; }
+.tasks.open { display: block; }
+
+.change-note { padding: 10px 18px; background: var(--warn2); border-bottom: 1px solid var(--warn3); font-size: 12px; color: var(--warn); font-family: var(--mono); }
+.finding-note { padding: 10px 18px; background: var(--ok2); border-bottom: 1px solid var(--ok3); font-size: 12px; color: var(--ok); font-family: var(--mono); }
+.correction-note { padding: 10px 18px; background: var(--err2); border-bottom: 1px solid var(--err3); font-size: 12px; color: #fca5a5; font-family: var(--mono); }
+
+.task { display: grid; grid-template-columns: 18px 1fr auto auto; gap: 0 12px; align-items: start; padding: 11px 18px; border-bottom: 1px solid var(--line2); transition: background .1s; }
+.task:last-child { border-bottom: none; }
+.task:hover { background: rgba(255,255,255,.02); }
+
+.task-check { width: 15px; height: 15px; border-radius: 3px; border: 1.5px solid var(--fg3); margin-top: 2px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all .15s; color: #fff; font-size: 9px; }
+.task-check:hover { border-color: var(--fg2); }
+.task-check.done { border-color: var(--ok); background: var(--ok); }
+.task-check.done::after { content: '✓'; }
+.task-check.partial { border-color: var(--warn); background: var(--warn2); }
+.task-check.partial::after { content: '~'; color: var(--warn); font-size: 11px; line-height: 1; }
+
+.task-body { min-width: 0; }
+.task-name { font-size: 13px; font-weight: 500; color: var(--fg); line-height: 1.35; }
+.task-name.done { text-decoration: line-through; color: var(--fg3); }
+.task-dep { font-size: 11.5px; color: var(--fg2); margin-top: 4px; line-height: 1.55; }
+
+.finding { display: inline-block; margin-top: 6px; padding: 6px 10px; background: var(--ok2); border: 1px solid var(--ok3); border-radius: 4px; font-size: 11px; color: #86efac; }
+.correction { display: inline-block; margin-top: 6px; padding: 6px 10px; background: var(--err2); border: 1px solid var(--err3); border-radius: 4px; font-size: 11px; color: #fca5a5; }
+.design-change { display: inline-block; margin-top: 6px; padding: 6px 10px; background: var(--warn2); border: 1px solid var(--warn3); border-radius: 4px; font-size: 11px; color: #fcd34d; }
+
+code { font-family: var(--mono); font-size: 10.5px; background: var(--bg3); color: var(--fg); padding: 0 5px; border-radius: 3px; border: 1px solid var(--line); }
+.ep { font-family: var(--mono); font-size: 10.5px; background: #0d2a1a; color: #4ade80; padding: 1px 7px; border-radius: 3px; border: 1px solid #1a4a2a; display: inline-block; margin: 1px 0; white-space: nowrap; }
+
+/* ── Tags ── */
+.tag { font-family: var(--mono); font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 3px; white-space: nowrap; }
+.t-reuse  { background: #0d2a3c; color: #7dd3fc; border: 1px solid #1a4a6e; }
+.t-adapt  { background: #1f2a0d; color: #a3e635; border: 1px solid #3a4a1a; }
+.t-ms     { background: var(--ms2); color: #67e8f9; border: 1px solid var(--ms3); }
+.t-cam    { background: var(--cam2); color: var(--cam); border: 1px solid var(--cam3); }
+.t-agent  { background: var(--agent2); color: var(--agent); border: 1px solid var(--agent3); }
+.t-new    { background: #2a1f0d; color: #fcd34d; border: 1px solid #4a3a1a; }
+.t-minor  { background: #2a0d2a; color: #e879f9; border: 1px solid #4a1a4a; }
+.t-native { background: #1f0d2a; color: #c084fc; border: 1px solid #3a1a4a; }
+.t-done   { background: var(--ok2); color: #86efac; border: 1px solid var(--ok3); }
+
+.effort { font-family: var(--mono); font-size: 10px; color: var(--fg3); white-space: nowrap; align-self: start; margin-top: 2px; }
+
+/* ── Status section ── */
+.status-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 20px 40px 0; }
+.status-card { border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; background: var(--bg2); }
+.status-card.sc-done { border-color: var(--ok3); background: var(--ok2); }
+.status-card.sc-partial { border-color: var(--warn3); background: var(--warn2); }
+.status-card.sc-next { border-color: var(--zbx3); background: var(--zbx2); }
+.status-card-label { font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+.sc-done .status-card-label { color: var(--ok); }
+.sc-partial .status-card-label { color: var(--warn); }
+.sc-next .status-card-label { color: #7dd3fc; }
+.status-card-title { font-size: 13px; font-weight: 600; color: var(--fg); margin-bottom: 6px; }
+.status-card-body { font-size: 12px; color: var(--fg2); line-height: 1.6; }
+.status-card-body ul { padding-left: 14px; }
+.status-card-body li { margin-bottom: 2px; }
+
+/* ── Architecture diagram ── */
+.arch { margin: 0 40px; padding: 18px; border: 1px solid var(--line); background: var(--bg2); border-radius: 8px; font-family: var(--mono); font-size: 11px; color: var(--fg2); white-space: pre; overflow-x: auto; line-height: 1.55; }
+.arch .node-ms  { color: #67e8f9; }
+.arch .node-cam { color: var(--cam); }
+.arch .node-rs  { color: var(--agent); }
+.arch .node-zbx { color: #7dd3fc; }
+.arch .node-w   { color: var(--warn); }
+
+@media (max-width: 800px) {
+  .header { flex-direction: column; padding: 20px; }
+  .main { padding: 16px 20px; }
+  .status-grid { grid-template-columns: 1fr; margin: 16px 20px 0; }
+  .timeline-wrap, .legend { padding: 14px 20px; }
+}
+@media print {
+  .task-check { border-color: #aaa; }
+  .task-check.done { background: #4caf50; border-color: #4caf50; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="brand">Zabbix · TCS — Custom Widget Development · Plan v1.0</div>
+    <h1>Milestone Dashboard Project Plan</h1>
+    <div class="subtitle">Zabbix 7.4 · Milestone XProtect 2022 R1+ · Site / Camera / Recording Server multi-host architecture · custom widgets in same framework as <code style="font-size:11px">apdetail</code> · companion to AP Plan v3.2</div>
+  </div>
+  <div class="header-stats">
+    <div class="stat-row"><span>Tasks complete</span><span class="stat-val" id="done-count">— / —</span></div>
+    <div class="stat-row"><span>Timeline</span><span class="stat-val">~12 weeks</span></div>
+    <div class="stat-row"><span>Milestones</span><span class="stat-val">6 (M0–M5)</span></div>
+    <div class="stat-row"><span>Existing assets</span><span class="stat-val" style="color:#86efac">1 template + 6 ext scripts</span></div>
+    <div class="stat-row"><span>Carry-forward gotchas</span><span class="stat-val" style="color:#fcd34d">G16–G29 (ZBX 7.4)</span></div>
+    <div id="progress-wrap"><div id="progress-bar"></div></div>
+  </div>
+</div>
+
+<!-- Project context banner -->
+<div class="change-banner" style="border-color:var(--ms3);background:var(--ms2)">
+  <strong style="color:#67e8f9">Project context — what exists today, what we're building:</strong> The repo already contains <code>Milestone_by_HTTP_API.yaml</code> — a single-host template that polls the XProtect API Gateway (sites, recording servers, cameras, license, ESS WebSocket state) and exposes per-camera and per-RS data as <em>dependent items on the gateway host</em>. It works, and ships with a serviceable native dashboard (honeycomb + item navigator + item card). This project is the next step: split that one-host model into a <strong>three-tier host topology</strong> so cameras and DVRs get first-class Zabbix hosts that can be polled directly, and replace the native dashboard with custom widgets that match the <code>apdetail</code> visual language from AP Plan v3.2.
+  <ul>
+    <li><strong>The Milestone API Gateway is still the source of truth.</strong> It always will be — it's the only thing that knows the camera ↔ hardware ↔ recording-server graph and the ESS state. The "Milestone Site" Zabbix host keeps every existing polling item: <code>milestone.sites.get</code>, <code>milestone.rs.getall</code>, <code>milestone_cameras_read.sh[3600]</code>, <code>milestone_ess_read.sh[]</code>, <code>milestone.license.get</code>, plus the API Gateway TCP probe. <em>Nothing breaks.</em></li>
+    <li><strong>Cameras become individual Zabbix hosts</strong> via a new <code>host_prototype</code> off the Camera LLD. Each host gets ICMP polled directly from the proxy (already an item prototype today — moves to the per-host template). Cameras with vendor SNMP support (Axis / Hanwha / Bosch) gain a vendor-specific sub-template selected by <code>sysObjectID</code> discovery. The Site host's per-camera dependent items (alarm, channel, hwmodel, ESS state breakdowns) <em>stay where they are</em> — they're cheap, they share the same source data, and ripping them out adds risk for no payoff. The new per-camera hosts <em>add</em> direct telemetry; they don't replace the API-derived items.</li>
+    <li><strong>Recording Servers become individual Zabbix hosts</strong> with the Zabbix Agent installed on Windows. The agent lights up the OS layer — CPU, memory, disk, NIC, Windows services, event log, perf counters — that the Milestone API simply doesn't expose. Service-state monitoring on <code>Milestone XProtect Recording Server</code>, <code>Milestone XProtect Event Server</code>, <code>Milestone XProtect Log Server</code>. Storage path discovery via the Milestone API stamps per-volume LLD macros onto the agent host so disk-free items track each archive root directly.</li>
+    <li><strong>Three custom widgets</strong> in the same module pattern as <code>apdetail</code>: <code>mssite</code> (site-level overview — license, RS roll-up, camera honeycomb, ESS health, recent events), <code>mscamera</code> (per-camera detail driven by <code>_hostid</code> broadcast — identity, ICMP sparklines, ESS state breakdown, recording state, optional snapshot thumbnail), <code>msserver</code> (per-DVR detail — agent metrics rings, services strip, storage volumes, attached-camera roll-up). Same Zabbix 7.4 widget framework and the same <code>TcsAp...</code>-style namespace prefix that AP Plan v3.2 settled on after G16.</li>
+    <li><strong>Carry-forward gotchas from AP Plan v3.2 §B.</strong> G16–G29 (Zabbix 7.4 widget-framework requirements: globally-unique module namespaces, <code>"type":"widget"</code> manifests, <code>widget</code> block with <code>js_class</code>+<code>size</code>, asset paths under <code>"assets"</code>, <code>CWidget</code> base class, <code>CWidgetFieldMultiSelectHost</code> for host fields, <code>CWidgetView</code> wrapper, AJAX <code>"data"</code> packing, <code>$this-&gt;fields_values</code> reads, <code>super.&lt;method&gt;()</code> first in every JS lifecycle override, DOM in <code>setContents</code> not <code>onActivate</code>) and G21 (PHP 8.0 not 8.1+, no <code>readonly</code>/<code>array_is_list</code>/enums/<code>never</code>/<code>new</code>-in-initializers/intersection-types) all apply. <em>Don't rediscover them.</em> They added an iteration each on the AP project; budget zero iterations on this one by referencing AP Plan v3.2 §B before writing the first widget line.</li>
+  </ul>
+</div>
+
+<!-- Status cards -->
+<div class="status-grid">
+  <div class="status-card sc-next">
+    <div class="status-card-label">M0 — Now</div>
+    <div class="status-card-title">Foundation &amp; Architecture</div>
+    <div class="status-card-body">
+      <strong style="color:#7dd3fc">In progress:</strong>
+      <ul>
+        <li>Audit of existing template — what to keep, what to move, what to add</li>
+        <li>Three-host architecture confirmed (Site / Camera / RS)</li>
+        <li>Vendor SNMP capability survey (Axis / Hanwha / Bosch / Hikvision)</li>
+        <li>DVR Agent capability proof on a Windows pilot</li>
+        <li>Naming + dedup rules (multi-channel encoders, site prefix)</li>
+      </ul>
+    </div>
+  </div>
+  <div class="status-card">
+    <div class="status-card-label">M1 — Template rework</div>
+    <div class="status-card-title">Three-template split + LLD host_prototypes</div>
+    <div class="status-card-body">
+      Rework <code>Milestone XProtect by HTTP</code> into a fleet template that runs camera + RS LLDs with <code>host_prototypes</code>. Add per-camera and per-RS templates linked from the prototypes. Pilot validation against a small site (≤20 cameras / 1 RS).
+    </div>
+  </div>
+  <div class="status-card">
+    <div class="status-card-label">M2–M5 — Widgets &amp; polish</div>
+    <div class="status-card-title">Three custom widgets + alerts</div>
+    <div class="status-card-body">
+      <code>mssite</code> (site overview), <code>mscamera</code> (camera detail), <code>msserver</code> (DVR detail). Then trigger work, multi-site validation, agent-rollout playbook, sign-off.
+    </div>
+  </div>
+</div>
+
+<!-- Architecture diagram -->
+<div class="tl-label" style="padding:18px 40px 6px;color:var(--fg3)">Architecture · target topology</div>
+<div class="arch">
+<span class="node-zbx">Zabbix Server / Proxy</span>
+  │
+  ├── <span class="node-ms">[Milestone Site host]</span>  ← API Gateway poll target (unchanged from existing template)
+  │     ├── milestone.sites.get             (5m, JS Script item, OAuth2 + /api/rest/v1/sites)
+  │     ├── milestone.rs.getall             (5m, JS Script item, /recordingServers + /hardware enrich)
+  │     ├── milestone.license.get           (1h, JS Script item, /licenseOverviewAll)
+  │     ├── milestone_cameras_read.sh[3600] (5m, External, reads Python-prepped snapshot)
+  │     ├── milestone_ess_read.sh[]         (1d, External, WebSocket state dump)
+  │     ├── net.tcp.service[443]            (30s, Simple, gateway reachable)
+  │     │
+  │     ├── LLD: <span class="node-w">Camera discovery</span>   →  <span class="node-cam">creates one host per parent hardware</span>
+  │     └── LLD: <span class="node-w">RS discovery</span>       →  <span class="node-rs">creates one host per recording server</span>
+  │
+  ├── <span class="node-cam">[Camera hosts ×N]</span>  ← auto-created via host_prototype, polled directly
+  │     ├── interface: SNMP {#CAM.HW.IP}:161   (vendor-specific, set when sysObjectID matches)
+  │     ├── interface: agent  {#CAM.HW.IP}:10050 (rare — only if camera runs zabbix_agent2)
+  │     ├── linked: "Milestone Camera by Direct Polling"   (always)
+  │     │   ├── icmpping[{HOST.IP}]            (1m)
+  │     │   ├── icmppingsec / icmppingloss     (1m)
+  │     │   ├── http probe vendor admin URL    (5m, basic-auth, ON/OFF macro)
+  │     │   └── trigger: down 2m → average; down 10m → high
+  │     └── linked (conditional): vendor sub-template
+  │         └── "Milestone Camera vendor — Axis"   (sysObjectID matches AXIS-VIDEO-MIB)
+  │             ├── temperature, uptime, failed-login count, storage card status …
+  │
+  └── <span class="node-rs">[Recording Server hosts ×M]</span>  ← auto-created via host_prototype, polled by agent
+        ├── interface: agent  {#RS.IP}:10050   (Zabbix Agent 2 on Windows)
+        ├── linked: "Milestone Recording Server by Agent"
+        │   ├── system.cpu.util / system.memory / vfs.dev.read|write   (Win baseline)
+        │   ├── service.info[Milestone XProtect Recording Server,state] (1m)
+        │   ├── service.info[Milestone XProtect Event Server,state]
+        │   ├── service.info[Milestone XProtect Log Server,state]
+        │   ├── service.info[Milestone XProtect Management Server,state]  (only on Mgmt-Server-co-located RS)
+        │   ├── perf_counter[\Process(VideoOS.Recorder.Service)\…]   (RAM, handle count, CPU%)
+        │   ├── eventlog[Milestone XProtect Recording Server,,Error,…]
+        │   ├── LLD: storage.volume.discovery  (one item per archive root from /storageDevices)
+        │   │     └── per-volume: vfs.fs.size[{#FSPATH},used|total|pused]
+        │   └── trigger: agent unreachable 2m → high; service stopped → high; archive &lt;10% free → average
+        │
+        └── companion items injected by Site fleet template (cross-host):
+            ├── milestone.rs.handshake.age[{#RS.ID}]   (already on Site host today, keep)
+            └── camera-count rollup (computed: cameras whose parentRS = this RS)
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="leg-item"><div class="leg-dot t-reuse"></div>Reuse from <code>apdetail</code></div>
+  <div class="leg-item"><div class="leg-dot t-adapt"></div>Adapt existing</div>
+  <div class="leg-item"><div class="leg-dot t-ms"></div>Milestone API</div>
+  <div class="leg-item"><div class="leg-dot t-cam"></div>Camera direct poll</div>
+  <div class="leg-item"><div class="leg-dot t-agent"></div>DVR agent</div>
+  <div class="leg-item"><div class="leg-dot t-new"></div>Net-new</div>
+  <div class="leg-item"><div class="leg-dot t-minor"></div>Minor add</div>
+  <div class="leg-item"><div class="leg-dot t-native"></div>Native ZBX widget</div>
+  <div class="leg-item"><div class="leg-dot t-done"></div>Done</div>
+  <div class="leg-item" style="margin-left:auto"><span style="color:var(--fg3);font-family:var(--mono);font-size:10px">Effort: S ≈ &lt;1d · M ≈ 2-4d · L ≈ 1+ wk</span></div>
+</div>
+
+<!-- Timeline -->
+<div class="timeline-wrap">
+  <div class="tl-label">Timeline · 12 weeks · two parallel tracks after M1</div>
+  <div class="tl-bar">
+    <div class="tl-seg" style="background:var(--m0);flex:2">M0 PLAN</div>
+    <div class="tl-seg" style="background:var(--m1);flex:3">M1 TEMPLATES</div>
+    <div class="tl-seg" style="background:var(--m2);flex:2">M2 SITE</div>
+    <div class="tl-seg" style="background:var(--m3);flex:2">M3 CAMERA</div>
+    <div class="tl-seg" style="background:var(--m4);flex:2">M4 SERVER</div>
+    <div class="tl-seg" style="background:var(--m5);flex:3">M5 POLISH + TEST</div>
+  </div>
+  <div class="tl-weeks">
+    <div class="tl-wk">W1</div><div class="tl-wk">W2</div><div class="tl-wk">W3</div><div class="tl-wk">W4</div><div class="tl-wk">W5</div><div class="tl-wk">W6</div><div class="tl-wk">W7</div><div class="tl-wk">W8</div><div class="tl-wk">W9</div><div class="tl-wk">W10</div><div class="tl-wk">W11</div><div class="tl-wk">W12</div>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     §A  Existing assets inventory — what we keep, what we move
+════════════════════════════════════════════════════════════════════ -->
+<div class="milestone" style="border-color:var(--ms3)">
+  <div class="ms-head" style="background:var(--ms2);cursor:default">
+    <div class="ms-accent" style="background:var(--ms)"></div>
+    <div class="ms-info">
+      <div class="ms-title" style="color:#67e8f9">§A — Existing-asset inventory
+        <span class="ms-badge active">Reference only — not a milestone</span>
+      </div>
+      <div class="ms-meta">What's already in <code>Milestone_by_HTTP_API.yaml</code> + the six external scripts. Read this before M1 begins so the rework decisions in M1 don't accidentally regress something that already works.</div>
+    </div>
+  </div>
+  <div class="tasks open" style="padding:16px 20px;background:#0a1f23">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:12.5px;color:var(--fg2);line-height:1.7">
+      <div><strong style="color:#67e8f9">A1 — OAuth2 password grant via <code>/IDP/connect/token</code>.</strong> Existing JS Script items get a token inline per call (no macro storage). Token is short-lived; no refresh dance. Keeps secret out of macros. <em>Keep this pattern in the Site host.</em></div>
+      <div><strong style="color:#67e8f9">A2 — Python-prepped camera snapshot via cron.</strong> <code>milestone_cameras_state.py</code> runs every 15m (cron) → writes a JSON file shaped <code>{"&lt;cam-guid&gt;": {address, displayName, enabled, channel, mac, hwId, hwName, hwModel, lastModified}, "__array": […]}</code>. Zabbix's external item <code>milestone_cameras_read.sh[3600]</code> just <code>cat</code>s it. <em>Reshape was moved to Python because Duktape's 10-second preprocessing timeout broke at 2500 cameras. Don't move it back.</em></div>
+      <div><strong style="color:#67e8f9">A3 — ESS WebSocket dump via cron.</strong> <code>milestone_ess_state.py</code> runs once a day, opens a WebSocket to the Event &amp; State Service, calls <code>get_state</code>, writes per-camera state JSON. Zabbix reads via external script. <em>Daily cadence is intentional — at scale this takes 1–2 minutes. Per-camera dependent items extract individual fields with 7d <code>DISCARD_UNCHANGED_HEARTBEAT</code>.</em></div>
+      <div><strong style="color:#67e8f9">A4 — Camera LLD with five LLD macros.</strong> <code>{#CAM.ID}</code> (GUID), <code>{#CAM.NAME}</code> (displayName), <code>{#CAM.ADDRESS}</code> (parent hardware IP, injected by the Python helper), <code>{#CAM.MAC}</code>, <code>{#CAM.ENABLED}</code>. Filter regex pair (<code>{$MILESTONE.CAM.NAME.MATCHES}</code> / <code>{$MILESTONE.CAM.NAME.NOT_MATCHES}</code>) for include/exclude. <em>M1 adds <code>{#CAM.HW.ID}</code> — the parent hardware GUID — used for host-name dedup so multi-channel encoders don't spawn N hosts on one IP (G2).</em></div>
+      <div><strong style="color:#67e8f9">A5 — Camera item prototypes that move.</strong> <code>icmppingloss</code>, <code>icmppingsec</code>, <code>icmpping</code> are item prototypes on the Camera LLD today, polled <em>at the Site host scope</em> using the camera's IP. <em>M1 moves these to the per-camera-host template.</em> Cleaner host-scoped graphs, cleaner trigger expressions, ICMP runs against the camera host's primary interface instead of being a per-discovered-item config quirk.</div>
+      <div><strong style="color:#67e8f9">A6 — Camera item prototypes that stay.</strong> Everything dependent on <code>milestone.cam.raw[{#CAM.ID}]</code> and <code>milestone.cam.ess.raw[{#CAM.ID}]</code> — alarm, channel, enabled, hwmodel, hwname, mac, lastmodified, ESS comm/recording state breakdowns, combined Status. These are all dependent items off batch masters at the Site scope. <em>Moving them to per-camera hosts means N WebSockets / N batch fetches — net loss.</em> Per-camera Zabbix host gets references back via cross-host item lookups in the widget (<code>API::Item()-&gt;get()</code> with <code>host=Site,key=milestone.cam.raw[GUID]</code>) — same pattern AP plan uses for fleet-template reads.</div>
+      <div><strong style="color:#67e8f9">A7 — RS LLD with three LLD macros.</strong> <code>{#RS.ID}</code> (GUID), <code>{#RS.NAME}</code> (displayName), <code>{#RS.DESCRIPTION}</code>. Item prototypes today: <code>milestone.rs.enabled</code>, <code>milestone.rs.handshake.age</code>, <code>milestone.rs.hostname</code>, <code>milestone.rs.lasthandshake</code>, <code>milestone.rs.version</code>, plus <code>milestone.rs.raw[{#RS.ID}]</code> dependent master and a <code>nodata 15m</code> trigger prototype. <em>All keep their place on the Site host.</em> M1 adds <code>{#RS.HOSTNAME}</code> + <code>{#RS.IP}</code> macros (resolved by the Python helper or a new <code>milestone_rs_state.py</code>) for the host_prototype's agent interface.</div>
+      <div><strong style="color:#67e8f9">A8 — Existing dashboard.</strong> Five widgets — <code>item</code> ×4 (site name, mgmt server version, physical memory, API gateway TCP), <code>honeycomb</code> (cameras with alarms, threshold-coloured), <code>itemnavigator</code> (camera list, filterable), <code>itemcard</code> (selected camera details, broadcast-driven), <code>problems</code> (other active problems). <em>The honeycomb is gold — keep it as the centrepiece.</em> What replaces is the <code>itemcard</code> drill-down (becomes the <code>mscamera</code> widget — much richer, sparklines + ESS state breakdown + optional thumbnail) and we add the <code>msserver</code> drill-down which doesn't exist today.</div>
+      <div><strong style="color:#67e8f9">A9 — Combined Status calc.</strong> <code>milestone.cam.alarm[{#CAM.ID}]</code> is a CALCULATED item with the formula folding <code>milestone.cam.enabled</code> + <code>icmpping</code> + <code>milestone.cam.ess.comm.type</code> into one of <code>{-1, 0, 1, 2, 3}</code> (Disabled / OK / ESS comm fault but ping OK / Ping down ESS OK / Both). Honeycomb thresholds 1/2/3 = yellow/orange/red. <em>Once ICMP moves to the per-camera host, this calc references a different host. Use <code>last(/Site/icmpping[{#CAM.ADDRESS}])</code> → <code>last(/Camera-{#CAM.ID}/icmpping)</code>. Trip-wire: Zabbix calc items must reference the host explicitly when crossing scopes — gotcha G4 below.</em></div>
+      <div><strong style="color:#67e8f9">A10 — Macros &amp; valuemaps.</strong> 9 host macros (<code>{$MILESTONE.HOST}</code>, <code>.USER</code>, <code>.PASSWORD</code> SECRET, <code>.SCHEME</code>, <code>.CLIENT_ID</code>, <code>.ESS.DELAY</code>, <code>.ESS.STATEGROUP.COMMUNICATION</code>, <code>.ESS.TYPE.COMMUNICATION_OK</code>, plus the camera include/exclude pair). 3 valuemaps (<code>Bool string</code>, <code>Camera status</code>, <code>Service state</code>). <em>All keep their place.</em> M1 adds three new groups: <code>{$MS.AGENT.*}</code> for DVR agent settings, <code>{$MS.CAM.SNMP.*}</code> for vendor SNMP, <code>{$MS.RS.*}</code> for RS-specific overrides.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     §B  Predicted gotchas — Milestone-specific (G1–G15)
+            + carry-forward (G16–G29 from AP Plan v3.2)
+════════════════════════════════════════════════════════════════════ -->
+<div class="milestone" style="border-color:var(--warn3);background:var(--warn2)">
+  <div class="ms-head" style="background:var(--warn2);cursor:default">
+    <div class="ms-accent" style="background:var(--warn)"></div>
+    <div class="ms-info">
+      <div class="ms-title" style="color:#fcd34d">§B — Predicted gotchas + carry-forward
+        <span class="ms-badge partial">G1–G15 Milestone-specific · G16–G29 inherited from AP Plan v3.2 §B</span>
+      </div>
+      <div class="ms-meta">Pre-flight list. Validate G1–G15 in M0 and M1 — most are predictions; treat as TODOs not laws. Carry-forwards are settled — accept and apply.</div>
+    </div>
+  </div>
+  <div class="tasks open" style="padding:16px 20px;background:#1a1308">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:12.5px;color:var(--fg2);line-height:1.7">
+      <div><strong style="color:#fcd34d">G1</strong> — <strong>Camera IP source:</strong> <code>/api/rest/v1/cameras</code> doesn't have an <code>address</code> field. The IP belongs to the parent <em>hardware</em> (<code>/api/rest/v1/hardware/{id}</code>). The existing Python helper already joins these — <code>milestone_cameras_state.py</code> — and stamps <code>address</code> + <code>mac</code> onto each camera before writing the snapshot. M1's host_prototype <em>must</em> use this pre-joined address. Calling <code>cameras</code> alone and expecting <code>$.address</code> in the LLD will give blank IPs and the Discovered Cameras host group fills with un-pollable hosts.</div>
+
+      <div><strong style="color:#fcd34d">G2</strong> — <strong>Multi-channel encoders blow up host count.</strong> One physical encoder = N "cameras" in Milestone (one per channel). They share <em>one IP</em>, <em>one MAC</em>, <em>one hardware GUID</em>, but get N camera GUIDs. If the host_prototype keys on <code>{#CAM.ID}</code>, you get N Zabbix hosts ICMP-pinging the same IP every minute. <strong>Decision:</strong> host_prototype keys on <code>{#CAM.HW.ID}</code> (parent hardware GUID), and the Camera LLD does a <code>JS</code> preprocessing dedup pass before emitting LLD entries. Channel-specific items (alarm, ESS state) stay as dependent items at Site scope keyed by <code>{#CAM.ID}</code> — those are free.</div>
+
+      <div><strong style="color:#fcd34d">G3</strong> — <strong>Display-name uniqueness.</strong> Milestone allows duplicate camera names across hardware / RS / sites. Zabbix host names must be globally unique. "Front Door" exists 50× across a campus. <strong>Decision:</strong> host_prototype <code>host:</code> = <code>{#CAM.HW.NAME}</code> if non-empty, falling back to <code>{#CAM.NAME} ({#CAM.HW.IP})</code>. <code>visible_name:</code> stays the human label. Site prefix (<code>{$MILESTONE.SITE.PREFIX}</code>) optional but recommended for multi-site Zabbix instances — defaults empty.</div>
+
+      <div><strong style="color:#fcd34d">G4</strong> — <strong>Calculated-item cross-host references.</strong> The existing <code>milestone.cam.alarm</code> calc pulls <code>last(//icmpping[{#CAM.ADDRESS}])</code> — the <code>//</code> is a same-host shortcut. Once ICMP lives on the per-camera host, the calc on the Site host must do <code>last(/Camera-Host-Name/icmpping)</code> with an explicit host. <strong>BUT</strong> the host name isn't an LLD-time constant — it's derived from <code>{#CAM.HW.NAME}</code> per G3. <strong>Resolution:</strong> use <code>last_foreach</code> with a tag filter — e.g. <code>last_foreach(//icmpping?[tag="cam_id" and value="{#CAM.ID}"])</code>. Tag-based foreach is host-agnostic. Works because every per-camera item gets tagged <code>cam_id={#CAM.ID}</code> by the per-camera template. Validate this works in M1's pilot before blanket conversion.</div>
+
+      <div><strong style="color:#fcd34d">G5</strong> — <strong>RS host name vs IP.</strong> <code>milestone.rs.hostname</code> field returns FQDN (e.g. <code>rec01.bryant.local</code>). May not resolve from the Zabbix proxy network — the proxy lives on a different VLAN typical. <strong>Resolution:</strong> the Python <code>milestone_rs_state.py</code> helper (new in M1) does a DNS lookup and stamps both <code>{#RS.IP}</code> (resolved A record) and <code>{#RS.HOSTNAME}</code> (FQDN). host_prototype's agent interface uses IP, <code>useip:'YES'</code>. If DNS fails, the helper marks the RS as <code>dns_unresolved</code> and the LLD filter excludes it (warn-only — Site-host items still poll fine via API).</div>
+
+      <div><strong style="color:#fcd34d">G6</strong> — <strong>Milestone service names vary by version.</strong> 2022 R1+: <code>Milestone XProtect Recording Server</code>, <code>Milestone XProtect Event Server</code>, <code>Milestone XProtect Log Server</code>, <code>Milestone XProtect Management Server</code>. Older builds: shorter names without "XProtect" prefix. Some SKUs have additional services (<code>Milestone XProtect Mobile Server</code>, <code>VideoOS Server Logger</code>). <strong>Resolution:</strong> per-RS template uses an <code>service.discovery</code> LLD filtered by display name regex <code>^Milestone XProtect.*</code>, then trigger prototypes on the discovered set. Avoids hardcoding names that drift across releases.</div>
+
+      <div><strong style="color:#fcd34d">G7</strong> — <strong>Storage path discovery.</strong> Recording archives live at configurable paths (default <code>D:\MediaDatabase</code>). Pull from <span class="ep">GET /api/rest/v1/recordingServers/{id}/storageDevices</span> — returns <code>path</code>, <code>maxSize</code>, <code>allocatedSize</code>, plus per-storage retention settings. Per-RS host gets an LLD that calls this endpoint via a JS Script item (the agent reads it back as a JSON master), then emits <code>{#FSPATH}</code> per storage device, then Zabbix Agent's <code>vfs.fs.size[{#FSPATH},*]</code> items poll free-space directly. <strong>Trip-wire:</strong> the API path is per-RS, but the Zabbix Agent runs on the RS itself — easier path is to call the API from the Site fleet template, then inject the storage-paths array as a host macro on each RS host (<code>{$MS.RS.STORAGE.PATHS}</code>) which the agent template's LLD parses. Pick the cleaner pattern in M1's RS template task.</div>
+
+      <div><strong style="color:#fcd34d">G8</strong> — <strong>License model varies.</strong> The existing <code>milestone.license.get</code> hits <code>/licenseOverviewAll</code> — site-level overview. Per-camera license info needs <code>/licenseDetails</code> per RS — and at large sites this is N×100 calls just for license. <strong>Decision:</strong> mssite widget shows site-level only (sufficient for the operator). Per-camera license drill-down is M5 polish (and only fires on operator click, not on dashboard open).</div>
+
+      <div><strong style="color:#fcd34d">G9</strong> — <strong>Camera GUID casing.</strong> Milestone returns lowercase UUIDs. Zabbix LLD macro substitution preserves the case it receives. JSONPath filters in dependent items use <code>$..[?(@.id=='{#CAM.ID}')]</code> — exact-match string comparison. <em>Don't</em> uppercase or normalise the GUID anywhere along the path. The existing template gets this right; the new per-camera template <em>must</em> too — set <code>host:</code> name preserves dash + casing exactly.</div>
+
+      <div><strong style="color:#fcd34d">G10</strong> — <strong>Honeycomb scale ceiling.</strong> Zabbix 7.4 honeycomb caps at ~500 items by default (<code>maxlimit</code>). At 2500 cameras the existing all-camera honeycomb truncates silently — operators see a partial view and assume everything is healthy. <strong>Resolution:</strong> M2's <code>mssite</code> widget renders the honeycomb itself (custom SVG) — no Zabbix limit. <em>Or</em> keep using the native honeycomb but offer per-RS scoping (filter <code>tag: rs_id = X</code> on the items) so each honeycomb is bounded to ≤500 cameras per RS. Cheaper. Pick in M2.</div>
+
+      <div><strong style="color:#fcd34d">G11</strong> — <strong>Vendor SNMP varies wildly.</strong> Axis: <code>AXIS-VIDEO-MIB</code> — temperature OID <code>.1.3.6.1.4.1.368.4.1.5.1.0</code>, uptime, status. Hanwha: <code>SAMSUNG-IPCAMERA-MIB</code> — different OID tree, mostly stream-stats focused. Bosch: rich SNMP including PTZ position, codec stats. Hikvision: minimal — just sysDescr / uptime / contact. <strong>Decision:</strong> M1 ships with one vendor sub-template (<code>Milestone Camera vendor — Axis</code> — most TCS sites are Axis). Other vendors get vendor sub-templates as we encounter them, conditionally linked via <code>sysObjectID</code> regex match in the host_prototype. Cameras with no SNMP get the base template's ICMP only — graceful.</div>
+
+      <div><strong style="color:#fcd34d">G12</strong> — <strong>ICMP scale.</strong> 2500 cameras × 1m ICMP = 2500 active checks/min. Default Zabbix proxy <code>StartPollers=5</code> and <code>StartPingers=1</code> — that's 60 ICMP/min capacity. Will queue. <strong>Resolution:</strong> set <code>{$MILESTONE.CAM.PING.INTERVAL}</code> default to <code>1m</code> at small sites (≤500 cams) and document scaling: 5m at 500–2500, 10m above. Also bump <code>StartPingers</code> on the Milestone proxy. <em>The macro already exists in the current template — keep it.</em> Document the sizing table in M5.</div>
+
+      <div><strong style="color:#fcd34d">G13</strong> — <strong>Camera HTTP probe credentials per vendor.</strong> Some support digest auth, some basic, Hikvision has its own ISAPI scheme. Generic <code>web.page.get</code> with macros works for digest+basic. Hikvision/Dahua specific endpoints need a vendor wrapper. <strong>Decision:</strong> base per-camera template ships ICMP only — no HTTP probe in the base. Vendor sub-templates add the HTTP probe with vendor-correct auth + endpoint. Avoids per-camera credential macros for the common case.</div>
+
+      <div><strong style="color:#fcd34d">G14</strong> — <strong>Trigger duplication risk.</strong> The Site host already has <code>milestone.cam.enabled='false' → WARNING</code> and <code>milestone.rs.handshake.age &gt; 300 → HIGH</code> per-prototype triggers. M1 adds per-camera-host triggers (ICMP down, SNMP unreachable). <em>These don't overlap</em> — different signals. But: an "ICMP down" trigger on the camera host AND a "Combined status = 3 Offline" trigger on the Site host will both fire for the same outage. <strong>Decision:</strong> the Combined-status calc trigger stays the canonical "camera offline" alert. ICMP-down on the camera host is severity <code>information</code> only — it's the input, not the alert. Operators see the calculated alarm; engineers debugging see the ICMP item history.</div>
+
+      <div><strong style="color:#fcd34d">G15</strong> — <strong>ESS WebSocket scope.</strong> Tempting to move ESS state to per-camera hosts. <strong>Don't.</strong> ESS is one WebSocket connection that emits all-camera state. Per-camera scoping = N WebSockets = pointless cost. Keep the existing <code>milestone_ess_state.py</code> daily dump at Site scope; keep the dependent items keyed by <code>{#CAM.ID}</code> there. Per-camera <code>mscamera</code> widget reads them via cross-host <code>API::Item()-&gt;get()</code> — same pattern AP plan uses for fleet-template reads (apdetail reads <code>xiq.ap.*[{#SERIAL}]</code> off the XIQ fleet host).</div>
+
+      <div style="grid-column:1/-1;margin:12px 0 4px;padding:6px 10px;background:#2a1f08;border:1px solid #5a3d0c;border-radius:4px;font-size:11px;color:#fcd34d;font-weight:600;letter-spacing:.06em;text-transform:uppercase">Carry-forward from AP Plan v3.2 — settled · do not rediscover</div>
+
+      <div><strong style="color:#fcd34d">G16–G24</strong> — <strong>Zabbix 7.4 widget framework.</strong> Globally-unique module namespace; manifest <code>"type":"widget"</code>; manifest <code>"widget":{"js_class":"…","size":{…}}</code> block; assets paths under <code>"assets":{"js":[…],"css":[…]}</code> relative to <code>assets/js/</code> and <code>assets/css/</code>; <code>Widget.php extends CWidget</code> not <code>CModule</code>; host fields are <code>CWidgetFieldMultiSelectHost</code> (plural <code>hostids</code>). <em>Source: AP Plan v3.2 §B.</em></div>
+
+      <div><strong style="color:#fcd34d">G25–G29</strong> — <strong>Widget data flow + JS lifecycle.</strong> View output via <code>(new CWidgetView($data))-&gt;addItem($body)-&gt;show()</code> not direct echo; pack everything operator-visible under <code>"data"</code> key on AJAX path; read field values via <code>$this-&gt;fields_values['name']</code> not <code>$this-&gt;getInput()</code>; every JS lifecycle override (<code>onInitialize</code>/<code>onActivate</code>/<code>onDeactivate</code>/<code>setContents</code>) must call <code>super.&lt;method&gt;()</code> first; DOM rendering in <code>setContents(response)</code> not <code>onActivate</code>; <code>onReady</code> is not a real CWidget hook. <em>Source: AP Plan v3.2 §B.</em></div>
+
+      <div><strong style="color:#fcd34d">G21 (carry)</strong> — <strong>PHP 8.0, not 8.1+.</strong> Drop <code>readonly</code> properties, <code>array_is_list()</code>, enums, <code>never</code>, <code>new</code> in initializers, intersection types. Polyfills in calling namespace because PHP function lookup is namespace-first. <em>Source: AP Plan v3.2 §B.</em> Same deployment, same constraint — applies to <code>mssite</code> / <code>mscamera</code> / <code>msserver</code> equally.</div>
+
+      <div><strong style="color:#fcd34d">G16 (carry)</strong> — <strong>Pick a deployment-specific namespace prefix from the start.</strong> AP plan landed on <code>TcsApDetail</code> after <code>APDetail</code> collided. Use <code>TcsMsSite</code> / <code>TcsMsCamera</code> / <code>TcsMsServer</code> for these widgets. <em>Three modules — three namespaces.</em></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     M0 — Foundation & Architecture
+════════════════════════════════════════════════════════════════════ -->
+<div class="milestone" id="m0">
+  <div class="ms-head open" onclick="toggle(this,'m0c')">
+    <div class="ms-accent" style="background:var(--m0)"></div>
+    <div class="ms-info">
+      <div class="ms-title">M0 — Foundation &amp; Architecture
+        <span class="ms-badge active">In progress · ~2 weeks</span>
+      </div>
+      <div class="ms-meta">Weeks 1–2 · settle the three-host topology, vendor SNMP capabilities, DVR agent feasibility, naming/dedup rules · output is a frozen architecture spec going into M1</div>
+    </div>
+    <div class="ms-right">
+      <span class="ms-count" id="m0-count"></span>
+      <span class="ms-pill" style="background:var(--m0)">2 wk</span>
+      <span class="ms-chevron open">▶</span>
+    </div>
+  </div>
+  <div class="ms-progress"><div class="ms-progress-bar" id="m0-bar" style="background:var(--m0)"></div></div>
+  <div class="tasks open" id="m0-tasks">
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m0c')"></div>
+      <div class="task-body">
+        <div class="task-name">Audit existing template &amp; six external scripts — write the §A inventory above</div>
+        <div class="task-dep">Walk every item, dependent item, LLD, host macro, valuemap, dashboard widget in <code>Milestone_by_HTTP_API.yaml</code>. Walk the six external scripts (<code>milestone_cameras_read.sh</code>, <code>milestone_cameras_refresh.sh</code>, <code>milestone_cameras_state.py</code>, and the three ESS counterparts). For each: stays where it is / moves to per-camera host / moves to per-RS host / replaced. Output the §A table in this plan (already drafted above based on YAML read — validate against running install).</div>
+      </div>
+      <span class="tag t-ms">Milestone API</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m0c')"></div>
+      <div class="task-body">
+        <div class="task-name">Pilot site selection — small site for M1 validation</div>
+        <div class="task-dep">Pick one site with ≤20 cameras, 1 recording server, mixed vendors if possible (ideally 1× Axis + 1× Hanwha or 1× Hikvision so vendor SNMP gotchas surface early). Production-load testing waits until M5; M0–M1 work on the pilot. Confirm Zabbix proxy can reach the pilot site's camera VLAN (ICMP + TCP 161 SNMP + TCP 80/443 HTTP) AND the RS Windows host (TCP 10050 agent). <strong>If proxy can't reach camera VLAN, M1 stops — direct camera polling is the whole point.</strong></div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">S</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m0c')"></div>
+      <div class="task-body">
+        <div class="task-name">Vendor SNMP capability survey — Axis, Hanwha, Bosch, Hikvision, Dahua</div>
+        <div class="task-dep">For each vendor present in TCS fleet: walk a sample camera (<code>snmpwalk -v2c -c public</code> first, then <code>snmpwalk -v3</code> if SNMPv3 is the deployment standard). Capture: <code>sysObjectID</code> (this is the LLD discriminator for vendor-template selection — G11), available MIBs, useful OIDs (temperature, uptime, failed-login count, storage card status, codec stats, stream count). Document in a new file <code>M0_Camera_SNMP_Survey.html</code> mirroring the existing <code>M0_AP_SNMP_Walk_Analysis.html</code> structure. <strong>Decision output:</strong> which vendors get a sub-template in M1, which get HTTP-only fallback, which get ICMP-only.
+          <div class="finding">Likely outcome (predicted): Axis is rich, ship a sub-template in M1. Hanwha + Bosch get sub-templates in M5 polish if time permits. Hikvision + Dahua are HTTP-only via their ISAPI / API endpoints — defer to M5.</div>
+        </div>
+      </div>
+      <span class="tag t-cam">Camera direct</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m0c')"></div>
+      <div class="task-body">
+        <div class="task-name">DVR agent feasibility — install Zabbix Agent 2 on a pilot RS</div>
+        <div class="task-dep">Install Zabbix Agent 2 on the pilot site's recording server. Confirm: agent process runs, doesn't conflict with Recording Server service, doesn't trigger Milestone's anti-tamper. Confirm <code>service.info[Milestone XProtect Recording Server,state]</code> reports correctly (state values: 0 stopped, 1 paused, 2 start_pending, 3 pause_pending, 4 continue_pending, 5 stop_pending, 6 running). Confirm <code>vfs.fs.size[D:\MediaDatabase,used|total|pused]</code> returns sane numbers on the archive volume. Confirm <code>perf_counter[\Process(VideoOS.Recorder.Service)\Working Set]</code> returns RAM. <strong>Capture working perf counter paths into <code>M0_DVR_Agent_Survey.html</code></strong> — they vary by Windows locale / version more than people expect.
+          <div class="finding">Predicted: works fine. Milestone's published "what's safe to install on a Recording Server" guidance explicitly allows monitoring agents. Agent 2 with default config is well under 1% CPU, ~30 MB RAM.</div>
+          <div class="design-change">→ If TCS security policy blocks third-party agents on RS hosts: fall back to SNMP from the RS (Windows SNMP Service) for OS-level metrics. Agent path is preferred — SNMP is leaner but loses Milestone-specific service monitoring. Decide before M1.</div>
+        </div>
+      </div>
+      <span class="tag t-agent">DVR agent</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m0c')"></div>
+      <div class="task-body">
+        <div class="task-name">Naming &amp; dedup rules — host_prototype host name strategy</div>
+        <div class="task-dep">Bind the G2 + G3 decisions in writing. Rules:
+          <br>(a) <strong>Camera host</strong> name = <code>{#CAM.HW.NAME}</code> if non-empty, else <code>{#CAM.NAME} ({#CAM.HW.IP})</code>. Keys on parent hardware GUID — multi-channel encoders create one host (G2). Visible name preserves the operator-friendly camera display name. Optional <code>{$MILESTONE.SITE.PREFIX}</code> prepended for multi-site Zabbix instances.
+          <br>(b) <strong>RS host</strong> name = <code>{#RS.NAME}</code> if globally unique within the Zabbix install, else <code>{#RS.NAME} — {#RS.HOSTNAME}</code>. RS GUIDs aren't human-readable; humans read these names in Problems lists.
+          <br>(c) <strong>Tags</strong> on every per-camera host: <code>cam_id={#CAM.ID}</code>, <code>cam_hw_id={#CAM.HW.ID}</code>, <code>rs_id={#CAM.RS.ID}</code>, <code>vendor={#CAM.HW.VENDOR}</code>, <code>site={$MILESTONE.SITE.NAME}</code>. Per-RS host: <code>rs_id={#RS.ID}</code>, <code>site={$MILESTONE.SITE.NAME}</code>. Tags drive widget cross-host filters and the calc-item <code>last_foreach</code> (G4).
+          <br>(d) <strong>Host group</strong> placement: cameras into <code>Discovered Cameras / {$MILESTONE.SITE.NAME}</code>, RSs into <code>Discovered Recording Servers / {$MILESTONE.SITE.NAME}</code> (pattern matches the AP plan's <code>Discovered APs / Wireless/{#LOCATION}</code>).</div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">S</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m0c')"></div>
+      <div class="task-body">
+        <div class="task-name">Calc-item cross-host strategy — validate <code>last_foreach</code> with tag filter</div>
+        <div class="task-dep">G4. Build a one-off proof: existing <code>milestone.cam.alarm[{#CAM.ID}]</code> rewritten to use <code>last_foreach(/*/icmpping?[tag="cam_id" and value="{#CAM.ID}"])</code>. Confirm: (1) returns the per-camera-host ICMP value cleanly, (2) survives the camera being temporarily disabled (no false alarm), (3) the calc evaluates in &lt;100ms even at 2500 hosts. <strong>If <code>last_foreach</code> with tag filter is too slow at scale</strong>, fall back to a JS Script item that does <code>API::Item()-&gt;get()</code> with the tag filter — slower per-eval but caches better.
+          <div class="finding">Zabbix 7.x <code>last_foreach</code> with tag filter is documented + supported but I haven't seen a benchmark at 2500 hosts. Validate before M1 commits.</div>
+        </div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m0c')"></div>
+      <div class="task-body">
+        <div class="task-name">Widget design walkthrough — three widgets, panels per widget</div>
+        <div class="task-dep">Mirror the AP plan's widget design walkthrough — Figma or paper sketches, then a markdown spec. Per widget:
+          <br><strong style="color:#67e8f9">mssite</strong> (4 tabs): Overview (license gauge, RS roll-up cards, site KPIs, ESS health), Cameras (custom honeycomb + filter), Servers (RS roll-up table), Events (Site-host problems + Milestone-side audit log).
+          <br><strong style="color:var(--cam)">mscamera</strong> (5 tabs): Overview (identity KV + ICMP sparklines + alarm status), State (ESS comm/recording state breakdowns + last-change timestamps + state-history timeline), Streams (per-channel info — codec, resolution, fps, bitrate from Milestone API), Hardware (parent-hw info + vendor SNMP block when present), Events (per-camera problem subset + recent state changes).
+          <br><strong style="color:var(--agent)">msserver</strong> (5 tabs): Overview (CPU/Mem/Disk rings + uptime + handshake age), Services (Milestone-services strip + service-discovery LLD list), Storage (per-volume bars + retention overlay + free-space sparklines), Cameras (table of cameras attached to this RS + their roll-up status), Events (Windows-event-log filtered to Milestone sources + per-RS problems).
+          <br>Output: <code>M0_Widget_Design.html</code> — visual reference for M2/M3/M4.</div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">L</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m0c')"></div>
+      <div class="task-body">
+        <div class="task-name">M0 closeout — sign-off doc, M1 unblock</div>
+        <div class="task-dep">Close out as <code>M0_Milestone_Closeout.html</code> mirroring <code>M0_Closeout_Reference.html</code> from the AP project. Captures: (a) the validated three-host architecture, (b) the §A inventory, (c) the §B gotcha list (G1–G15) with which are validated vs predicted, (d) the vendor SNMP survey results, (e) the DVR agent survey, (f) the naming/dedup decisions, (g) widget design walkthroughs, (h) any gotchas discovered during M0 (will be appended to §B as G16+ Milestone-specific, separate numbering from the carry-forwards). Sign-off unblocks M1.</div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">S</span>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     M1 — Template rework: three-template split + LLD host_prototypes
+════════════════════════════════════════════════════════════════════ -->
+<div class="milestone" id="m1">
+  <div class="ms-head open" onclick="toggle(this,'m1c')">
+    <div class="ms-accent" style="background:var(--m1)"></div>
+    <div class="ms-info">
+      <div class="ms-title">M1 — Three-template split + LLD host_prototypes
+        <span class="ms-badge" style="background:#0d1f3c;color:#7dd3fc;border:1px solid #1a3a6e">Blocks on M0 sign-off · ~3 weeks</span>
+      </div>
+      <div class="ms-meta">Weeks 3–5 · the pivot from one-host to three-host · pilot validation against M0's chosen site · output: three production templates + the smoke-test verdict that unblocks M2/M3/M4 in parallel</div>
+    </div>
+    <div class="ms-right">
+      <span class="ms-count" id="m1-count"></span>
+      <span class="ms-pill" style="background:var(--m1)">3 wk</span>
+      <span class="ms-chevron open">▶</span>
+    </div>
+  </div>
+  <div class="ms-progress"><div class="ms-progress-bar" id="m1-bar" style="background:var(--m1)"></div></div>
+  <div class="tasks open" id="m1-tasks">
+
+    <div class="change-note">M1 is the highest-risk milestone — it changes how every existing alarm is sourced. <strong>Run on a clone of the production template against a non-prod Milestone instance for the first week.</strong> Smoke-test green before swapping the production template.</div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m1c')"></div>
+      <div class="task-body">
+        <div class="task-name">Fork existing template → <code>Milestone Site by HTTP API</code> (fleet template)</div>
+        <div class="task-dep">Clone <code>Milestone XProtect by HTTP</code> → rename → bump version. <em>Most items unchanged</em> — site polling, license, RS LLD, ESS WebSocket, API Gateway TCP probe all carry over verbatim. The two changes:
+          <br>(1) Camera LLD adds three new lld_macro_paths (<code>{#CAM.HW.ID}</code> = <code>$.hardwareId</code>, <code>{#CAM.HW.NAME}</code> = <code>$.hardwareName</code>, <code>{#CAM.HW.VENDOR}</code> = <code>$.vendor</code> — see helper script update task below) and a <code>host_prototypes</code> block emitting one host per <em>parent hardware</em> (G2 — dedup happens upstream in Python).
+          <br>(2) RS LLD adds <code>{#RS.IP}</code> + <code>{#RS.HOSTNAME}</code> macros (G5) and a <code>host_prototypes</code> block emitting one host per RS.
+          <br>The four ICMP item prototypes on the existing camera LLD <em>delete from this template</em> — they move to the per-camera template (next task). Combined-status calc <code>milestone.cam.alarm</code> updates its formula per G4.</div>
+      </div>
+      <span class="tag t-adapt">Adapt</span>
+      <span class="effort">L</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m1c')"></div>
+      <div class="task-body">
+        <div class="task-name">Update <code>milestone_cameras_state.py</code> — emit hardware-dedup + vendor + RS-id fields</div>
+        <div class="task-dep">The Python helper today joins <code>/cameras</code> + <code>/hardware</code> and stamps <code>address</code>, <code>mac</code>. M1 adds:
+          <br>(1) <strong>Hardware dedup pass:</strong> walk cameras, group by <code>hardwareId</code>, mark first camera per group as <code>__primary__: true</code>. The host_prototype LLD filter selects only <code>__primary__</code> entries — N channels collapse to 1 host.
+          <br>(2) <strong>Vendor extraction:</strong> hardware record has <code>name</code> like "AXIS P3245-LV (00408C12345)" or model strings like "Hanwha QNV-7080R" — regex extract vendor token. Known set: Axis, Hanwha, Bosch, Hikvision, Dahua, Pelco, Panasonic. Unknown → "Other".
+          <br>(3) <strong>RS-id stamp:</strong> camera record gets <code>recordingServerId</code> from <code>/cameras/{id}/recordingServer</code> (one extra call per camera at refresh time — runs from cron, not Zabbix-poll-time, so the cost is bounded).
+          <br>(4) <strong>SNMP sysObjectID stamp (optional, do once per hw):</strong> if the helper has SNMP creds (new <code>{$MILESTONE.HW.SNMP.COMMUNITY}</code> macro, default empty) it walks <code>1.3.6.1.2.1.1.2.0</code> at refresh time and stamps the sysObjectID OID on the hardware record. The vendor sub-template selection in the host_prototype keys off this. <em>Skip if community is empty</em> — vendor-template selection falls back to the regex-extracted vendor name.</div>
+      </div>
+      <span class="tag t-ms">Milestone API</span>
+      <span class="effort">L</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m1c')"></div>
+      <div class="task-body">
+        <div class="task-name">New: <code>milestone_rs_state.py</code> — RS DNS resolution + storage paths</div>
+        <div class="task-dep">New external script runs from cron (every 30m — RS list changes rarely). Calls <code>/recordingServers</code>, joins each with <code>/recordingServers/{id}/storageDevices</code> for archive paths. For each RS: DNS-resolve <code>hostName</code> → IP (timeout 2s). Output JSON shape <code>{"&lt;rs-guid&gt;": {hostName, ip, version, storage:[{path, maxSize, retention}], cameraCount}, "__array":[…]}</code>. Site fleet template gets a new external item <code>milestone_rs_read.sh[]</code> that <code>cat</code>s this snapshot. RS LLD switches its master from <code>milestone.rs.getall</code> (the JS Script item) to this external item — JS script stays as a backup data source for the items that don't need the storage join. <em>Or</em> keep both: JS item drives the existing dependent items (handshake age, version, etc.), external item drives only the host_prototype LLD (where IP + storage are needed).
+          <div class="design-change">→ Picking option (b) — keep both — is less invasive. M1 ships option (b); revisit in M5 if maintenance cost shows.</div>
+        </div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m1c')"></div>
+      <div class="task-body">
+        <div class="task-name">New template: <code>Milestone Camera by Direct Polling</code></div>
+        <div class="task-dep">Per-camera-host template. Linked from camera host_prototype. Items:
+          <br><strong>ICMP triplet</strong> (was item-prototype on Site-host LLD, moves here): <code>icmpping</code>, <code>icmppingsec</code>, <code>icmppingloss</code> — interval <code>{$MS.CAM.PING.INTERVAL}</code> default 1m. Triggers: <code>icmpping=0</code> for 2m → <em>information</em> only (G14 — alarm rolls up via Site-host calc, not duplicated here).
+          <br><strong>SNMP discovery hook</strong>: <code>system.descr</code>, <code>system.uptime</code>, <code>sysObjectID</code> (stored as the conditional-template trigger key — not the LLD discriminator, that happens at Python helper time). Polled at 5m. Skip if <code>{$MS.CAM.SNMP.ENABLE}</code> != <code>1</code> (default 0 — opt-in per camera or per host group via macro inheritance).
+          <br><strong>HTTP root probe (optional)</strong>: <code>web.page.get[{HOST.IP}/ , , 5]</code> at 10m, asserts response &gt;= 200 &amp;&amp; &lt; 500. Off by default (<code>{$MS.CAM.HTTP.ENABLE}</code> = 0). Vendor sub-templates override with vendor-correct endpoint + auth.
+          <br>Macros: <code>{$MS.CAM.PING.INTERVAL}</code>=1m, <code>{$MS.CAM.SNMP.ENABLE}</code>=0, <code>{$MS.CAM.HTTP.ENABLE}</code>=0, <code>{$MS.CAM.HTTP.PATH}</code>=/. Triggers minimal — three info-level (ICMP down, SNMP unreachable, HTTP not 2xx/3xx) + one warning (uptime &lt; 1h = recent reboot).
+          <div class="finding">All ICMP item keys preserve current names (<code>icmpping</code>, <code>icmppingsec</code>, <code>icmppingloss</code>) — important so historical data continues from the same item names after the migration. Migration step in M1 closeout copies historical points across via <code>API::History()</code>.</div>
+        </div>
+      </div>
+      <span class="tag t-cam">Camera direct</span>
+      <span class="effort">L</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m1c')"></div>
+      <div class="task-body">
+        <div class="task-name">New template: <code>Milestone Camera vendor — Axis</code></div>
+        <div class="task-dep">First vendor sub-template. Linked conditionally — Camera host_prototype's <code>conditional templates</code> (Zabbix 7.4 feature: link templates based on LLD macro values) selects this when <code>{#CAM.HW.VENDOR} = Axis</code>. Items via SNMPv3 (creds inherited from <code>{$SNMP_SEC_NAME}</code> / <code>{$SNMP_AUTH_PASS}</code> / <code>{$SNMP_PRIV_PASS}</code> — same global macros AP template uses, no duplication):
+          <br>• Temperature — OID <code>.1.3.6.1.4.1.368.4.1.5.1.0</code> (depends on Axis model — verify in M0 vendor survey)
+          <br>• System uptime — <code>.1.3.6.1.2.1.1.3.0</code> (HOST-RESOURCES if present, else SNMPv2-MIB)
+          <br>• Failed login attempts — Axis-specific OID (research in M0 survey)
+          <br>• SD card status if present — Axis-specific OID
+          <br>• Codec / stream count via <code>.1.3.6.1.4.1.368.4.*</code> (research)
+          <br>Triggers: temp &gt; 60°C → average, temp &gt; 70°C → high, failed-login spike → warning. Discoveries: per-storage-card LLD when more than one SD slot present.
+          <div class="design-change">→ Hanwha + Bosch + Hikvision sub-templates planned for M5 polish. M1 ships Axis only — sized for "the most common vendor in TCS fleet" per M0 survey.</div>
+        </div>
+      </div>
+      <span class="tag t-cam">Camera direct</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m1c')"></div>
+      <div class="task-body">
+        <div class="task-name">New template: <code>Milestone Recording Server by Agent</code></div>
+        <div class="task-dep">Per-RS-host template. Linked from RS host_prototype. Items:
+          <br><strong>OS baseline</strong> (Zabbix-stock Windows agent items, just re-keyed): <code>system.cpu.util[,system]</code>, <code>system.cpu.util[,user]</code>, <code>vm.memory.utilization</code>, <code>vm.memory.size[available|total]</code>, <code>net.if.in[Ethernet]</code>, <code>net.if.out[Ethernet]</code>, <code>system.uptime</code>, <code>vfs.fs.discovery</code> (root LLD for system disks).
+          <br><strong>Milestone services LLD</strong> (G6): <code>service.discovery</code> filtered to <code>{#SERVICE.NAME}</code> matching <code>^Milestone XProtect.*</code>. Item prototype: <code>service.info[{#SERVICE.NAME},state]</code> — interval 1m, valuemap "Windows service state". Trigger prototype: state ≠ 4 (running) → high. Description prototype identifies the role from name (Recording Server / Event Server / Log Server / etc).
+          <br><strong>Storage LLD</strong> (G7): master item is a JS Script that reads <code>{$MS.RS.STORAGE.PATHS}</code> macro (injected by Site fleet template from <code>milestone_rs_state.py</code>'s storage join). Item prototype: <code>vfs.fs.size[{#FSPATH},pused]</code>. Triggers: &gt;90% used → average, &gt;95% → high. Storage-trend graph: <code>vfs.fs.size[{#FSPATH},free]</code> for the sparkline in the msserver widget.
+          <br><strong>Process-level Milestone metrics</strong>: <code>perf_counter[\Process(VideoOS.Recorder.Service)\Working Set]</code> for RAM, <code>perf_counter[\Process(VideoOS.Recorder.Service)\Handle Count]</code> for handle leak detection, <code>perf_counter[\Process(VideoOS.Recorder.Service)\% Processor Time]</code>. <em>Path strings vary by Windows locale — verified in M0.</em>
+          <br><strong>Windows event log</strong>: <code>eventlog[Application,,Error,Milestone XProtect Recording Server,]</code> — Error+ events from Milestone sources, polled at 1m. Drives the Events tab on the msserver widget.
+          <br>Macros: <code>{$MS.RS.STORAGE.PATHS}</code> (JSON array, populated by Site fleet template via host macro injection), <code>{$MS.RS.AGENT.TIMEOUT}</code> default 30s, <code>{$MS.RS.SVC.NAME.MATCH}</code> default <code>^Milestone XProtect.*</code>.</div>
+      </div>
+      <span class="tag t-agent">DVR agent</span>
+      <span class="effort">L</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m1c')"></div>
+      <div class="task-body">
+        <div class="task-name">Wire host_prototype interfaces — Camera SNMP + RS Agent</div>
+        <div class="task-dep">In the Site fleet template's two host_prototypes:
+          <br><strong>Camera host_prototype interfaces:</strong> two interfaces declared — primary <code>SNMP</code> at <code>{#CAM.HW.IP}:161</code> with SNMPv3 details (inherited from same <code>{$SNMP_SEC_NAME}</code> / <code>{$SNMP_AUTH_PASS}</code> / <code>{$SNMP_PRIV_PASS}</code> macros AP plan uses — share creds across templates), and a stub <code>Zabbix agent</code> interface at the same IP:10050 with <code>main: 'NO'</code> for the rare camera that runs zabbix_agent2. ICMP polls automatically use the primary interface IP (<code>{HOST.IP}</code> in <code>icmpping</code>).
+          <br><strong>RS host_prototype interfaces:</strong> single <code>Zabbix agent</code> interface at <code>{#RS.IP}:10050</code>, <code>main: 'YES'</code>, <code>useip: 'YES'</code>. SNMP interface stub if the RS runs Windows SNMP Service (rare — agent supersedes).
+          <br>Macros injected on each host_prototype: Camera gets <code>{$MS.CAM.ID}={#CAM.ID}</code>, <code>{$MS.CAM.HW.ID}={#CAM.HW.ID}</code>, <code>{$MS.CAM.RS.ID}={#CAM.RS.ID}</code>, <code>{$MS.CAM.VENDOR}={#CAM.HW.VENDOR}</code>. RS gets <code>{$MS.RS.ID}={#RS.ID}</code>, <code>{$MS.RS.HOSTNAME}={#RS.HOSTNAME}</code>, <code>{$MS.RS.STORAGE.PATHS}={#RS.STORAGE.PATHS_JSON}</code>. <em>These macros are how widgets and templates resolve per-host context without re-fetching the API.</em></div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m1c')"></div>
+      <div class="task-body">
+        <div class="task-name">Combined-status calc — port to <code>last_foreach</code> with tag filter (G4)</div>
+        <div class="task-dep">Rewrite <code>milestone.cam.alarm[{#CAM.ID}]</code> formula:
+          <br>was: <code>last(//icmpping[{#CAM.ADDRESS}])</code>
+          <br>now: <code>last_foreach(/*/icmpping?[tag="cam_id" and value="{#CAM.ID}"])</code>
+          <br>Same shape for the <code>milestone.cam.status</code> calc. Run M0's benchmark proof against the pilot site first; if foreach is too slow, fall back to the JS Script item alternative (M0 task identified the contingency). Validate combined-status valuemap still maps cleanly: -1 disabled, 0 OK, 1 ESS comm fault but ping OK, 2 ping down ESS OK, 3 both. Honeycomb thresholds preserved.</div>
+      </div>
+      <span class="tag t-adapt">Adapt</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m1c')"></div>
+      <div class="task-body">
+        <div class="task-name">Smoke test — pilot site, end-to-end</div>
+        <div class="task-dep">On pilot site: import the three new templates, point <code>{$MILESTONE.HOST}</code> at the pilot API Gateway, wait one full LLD cycle (max 5 min). Verify:
+          <br>(1) Site host items still green (no regression on the AP-level polling).
+          <br>(2) N camera hosts created in <code>Discovered Cameras / {site}</code> — N matches expected (≤20 cameras → ≤20 hosts after dedup).
+          <br>(3) ICMP polls flowing on each camera host. <code>icmpping</code> values landing in history.
+          <br>(4) Axis cameras (if present) get the vendor sub-template auto-linked, sysObjectID matches, temperature item populating.
+          <br>(5) 1 RS host created. Agent active. Service-discovery LLD fires, three or four <code>service.info[Milestone XProtect *,state]</code> items active, all reporting state=4 (running).
+          <br>(6) Storage LLD fires, <code>vfs.fs.size[D:\MediaDatabase,pused]</code> populating.
+          <br>(7) Combined-status calc on Site host evaluating correctly with the new <code>last_foreach</code> shape — same values as before the migration for the same camera state.
+          <br>(8) Existing native dashboard (honeycomb + item navigator + item card) still works — those still read off the Site host, which didn't change visibly.
+          <br>Output: M1 closeout doc with smoke test results table (item / expected / actual / verdict). Any reds become carried-forward gotchas (G16+ Milestone-specific) into M2/M3/M4.</div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">M</span>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     M2 — mssite widget (Site overview)
+════════════════════════════════════════════════════════════════════ -->
+<div class="milestone" id="m2">
+  <div class="ms-head open" onclick="toggle(this,'m2c')">
+    <div class="ms-accent" style="background:var(--m2)"></div>
+    <div class="ms-info">
+      <div class="ms-title">M2 — <code>mssite</code> widget · Site Overview
+        <span class="ms-badge" style="background:#0d2010;color:#a3e635;border:1px solid #2a4d1a">Blocks on M1 · runs parallel with M3 + M4</span>
+      </div>
+      <div class="ms-meta">Weeks 6–7 · the dashboard centrepiece · all data already in Zabbix (Site host items + LLD-emitted Camera/RS hosts) — this milestone is mostly UI</div>
+    </div>
+    <div class="ms-right">
+      <span class="ms-count" id="m2-count"></span>
+      <span class="ms-pill" style="background:var(--m2)">2 wk</span>
+      <span class="ms-chevron open">▶</span>
+    </div>
+  </div>
+  <div class="ms-progress"><div class="ms-progress-bar" id="m2-bar" style="background:var(--m2)"></div></div>
+  <div class="tasks open" id="m2-tasks">
+
+    <div class="change-note" style="border-color:#2a4d1a;background:#0d2010;color:#a3e635">M2 reuses the entire <code>apdetail</code> widget skeleton — manifest, Widget.php, WidgetForm.php, actions/WidgetView.php, assets/js/class.widget.js, assets/css/widget.css. Three substantive code reuses: tab navigation shell, sparkline renderer, donut-ring renderer. Net-new: the custom honeycomb (G10), the license gauge, the RS roll-up cards.</div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m2c')"></div>
+      <div class="task-body">
+        <div class="task-name">Scaffold <code>mssite</code> module — namespace <code>TcsMsSite</code></div>
+        <div class="task-dep">Module skeleton via <code>cp -r apdetail mssite</code> + namespace renames. <strong>Namespace prefix per G16:</strong> globally unique <code>TcsMsSite</code>, not <code>MsSite</code>. <code>manifest.json</code> with <code>"type":"widget"</code> (G17) + <code>"widget":{"js_class":"CWidgetMsSite","size":{"width":24,"height":12}}</code> (G18) + <code>"assets":{"js":["class.widget.js"],"css":["widget.css"]}</code> (G19). <code>WidgetView::doAction()</code> resolves Site host via <code>CWidgetFieldMultiSelectHost</code> (G24 — plural <code>hostids</code>). Form fields: Site host selector, time period, optional honeycomb-filter regex.</div>
+      </div>
+      <span class="tag t-reuse">Reuse</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m2c')"></div>
+      <div class="task-body">
+        <div class="task-name">Overview tab — license gauge + site KPIs + ESS health</div>
+        <div class="task-dep">Top row (4 cards): <strong>Site Identity</strong> (<code>milestone.site.name</code> + <code>milestone.site.version</code> + uptime since-handshake + physical memory KV), <strong>License Gauge</strong> (donut from <code>milestone.license.get</code> JSONPath — used / total per license category, color thresholds &gt;80 warn, &gt;95 err), <strong>API Gateway Status</strong> (TCP probe state + last-handshake age countdown, source: <code>net.tcp.service[tcp,…,443]</code> + <code>milestone.site.handshake.age</code>), <strong>ESS Health</strong> (last snapshot age from <code>milestone_ess_read.sh[]</code> nodata trigger + per-stategroup-error count from JSONPath on the snapshot).
+          <br>Mid row: <strong>Recording Servers strip</strong> — one card per RS, sourced from the RS LLD on the Site host (existing <code>milestone.rs.*[{#RS.ID}]</code> dependent items). Each card: RS name, version, handshake-age badge, attached-camera count + roll-up status (count of cameras with <code>alarm &gt; 0</code> via <code>last_foreach</code> with rs_id tag filter). Click a card → broadcast <code>_hostid</code> = that RS's host → drives the msserver widget elsewhere on the dashboard.
+          <br>Bottom: <strong>Recent events</strong> — Zabbix problems for the Site host, last 24h, severity-coloured.</div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">L</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m2c')"></div>
+      <div class="task-body">
+        <div class="task-name">Cameras tab — custom honeycomb (G10 fix)</div>
+        <div class="task-dep">Render the camera honeycomb in custom SVG inside the widget — no Zabbix native-honeycomb 500-item ceiling. Hex grid sized to fit the widget body, packed with one cell per camera. Cell colour driven by <code>milestone.cam.alarm[{#CAM.ID}]</code> on the Site host (via API::Item-&gt;get with tag <code>view=alarm</code>). Hover shows camera name + status. Click broadcasts <code>_hostid</code> = camera-host-id → drives mscamera widget.
+          <br>Filter row above the honeycomb: <strong>by RS</strong> (pill per RS, from RS LLD), <strong>by status</strong> (All / Issues only / Disabled), <strong>by vendor</strong> (from <code>{#CAM.HW.VENDOR}</code> tag), <strong>by name regex</strong> (text input). Filter state persisted in <code>sessionStorage</code> as <code>mssite.honeycomb.filter</code>.
+          <br>At 2500 cameras the SVG is ~50 cells wide × 50 tall — fits. At higher scales (5000+) the widget switches to a virtualized canvas — defer to M5 if not needed at pilot scale.
+          <div class="design-change">→ Native honeycomb stays as a fallback widget configurable on the dashboard for sites under 500 cameras — operators with simpler sites get the lighter native rendering.</div>
+        </div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">L</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m2c')"></div>
+      <div class="task-body">
+        <div class="task-name">Servers tab — RS roll-up table</div>
+        <div class="task-dep">Table of all recording servers. Columns: Name (links to msserver widget via <code>_hostid</code> broadcast), Hostname, Version, Last handshake (relative time + absolute on hover), Service state aggregate (badge: all-running / partial / down — computed from <code>service.info[*,state]</code> items on the RS host via cross-host API::Item lookup), Storage used % (worst volume, computed from <code>vfs.fs.size[*,pused]</code>), Cameras attached + alarm count.
+          <br>Sort by alarm count desc by default. Empty state: "No recording servers discovered — check Site host LLD."</div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m2c')"></div>
+      <div class="task-body">
+        <div class="task-name">Events tab — Site-host problems + Milestone audit log</div>
+        <div class="task-dep">Two sources merged into a single timeline: (1) Zabbix <code>event.get</code> filtered to Site host + per-RS hosts + per-camera hosts (huge fan-out — paginate at 100, time-period bounded by widget's <code>_timeperiod</code> broadcast), (2) Milestone audit log via new <code>milestone.audit.get</code> JS Script item on the Site host (calls <span class="ep">GET /api/rest/v1/auditEntries</span> — paginated). Normalize to common shape: <code>{ts, source ('ZBX'|'MS'), severity, msg, obj}</code>. Source badge per row. Mirrors the AP plan's M5 unified event feed pattern.</div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">M</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     M3 — mscamera widget (Camera detail)
+════════════════════════════════════════════════════════════════════ -->
+<div class="milestone" id="m3">
+  <div class="ms-head open" onclick="toggle(this,'m3c')">
+    <div class="ms-accent" style="background:var(--m3)"></div>
+    <div class="ms-info">
+      <div class="ms-title">M3 — <code>mscamera</code> widget · Camera Detail
+        <span class="ms-badge" style="background:#0d2010;color:#a3e635;border:1px solid #2a4d1a">Blocks on M1 · runs parallel with M2 + M4</span>
+      </div>
+      <div class="ms-meta">Weeks 6–8 · per-camera deep-dive driven by <code>_hostid</code> broadcast from mssite honeycomb · five tabs · most data already in Zabbix, mscamera is presentation</div>
+    </div>
+    <div class="ms-right">
+      <span class="ms-count" id="m3-count"></span>
+      <span class="ms-pill" style="background:var(--m3)">2.5 wk</span>
+      <span class="ms-chevron open">▶</span>
+    </div>
+  </div>
+  <div class="ms-progress"><div class="ms-progress-bar" id="m3-bar" style="background:var(--m3)"></div></div>
+  <div class="tasks open" id="m3-tasks">
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m3c')"></div>
+      <div class="task-body">
+        <div class="task-name">Scaffold <code>mscamera</code> module — namespace <code>TcsMsCamera</code></div>
+        <div class="task-dep">Same skeleton clone as M2 step 1. Form: receives <code>_hostid</code> from EventHub (camera host id). Tab navigation shell with <code>sessionStorage</code> for <code>mscamera.activeTab</code>. <code>WidgetView::doAction()</code> resolves <code>_hostid</code>, loads camera-host context (host macros: <code>{$MS.CAM.ID}</code>, <code>{$MS.CAM.HW.ID}</code>, <code>{$MS.CAM.RS.ID}</code>, <code>{$MS.CAM.VENDOR}</code>). Site host id derives from a widget config field or — cleaner — from a tag scan: every camera host has a <code>site_host_id</code> tag stamped by the LLD, widget reads it back.</div>
+      </div>
+      <span class="tag t-reuse">Reuse</span>
+      <span class="effort">S</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m3c')"></div>
+      <div class="task-body">
+        <div class="task-name">Overview tab — identity KV + ICMP sparklines + alarm</div>
+        <div class="task-dep">Top: <strong>Identity card</strong> — Camera Name, Hardware Name (parent encoder), Hardware Model, Channel, GUID, MAC, IP. Source: dependent items on Site host via <code>API::Item</code> with <code>host=Site, key=milestone.cam.{model|hwname|channel|mac}[{$MS.CAM.ID}]</code>. Cached values, no live API calls.
+          <br>Mid: <strong>Combined Status badge</strong> — large valuemapped status (Disabled / OK / ESS comm fault but ping OK / Ping down ESS OK / Both). Source: <code>milestone.cam.alarm[{$MS.CAM.ID}]</code> from Site host. Threshold-coloured per existing valuemap.
+          <br>Bottom: <strong>ICMP sparkline strip</strong> — 3 sparklines from <em>this camera host</em> (not Site host, post-M1): Latency (<code>icmppingsec</code>, ms units), Packet Loss (<code>icmppingloss</code>, % units), Reachability (<code>icmpping</code>, 0/1). Time window from dashboard <code>_timeperiod</code> broadcast. Reuse <code>apdetail</code>'s sparkline renderer verbatim.</div>
+      </div>
+      <span class="tag t-adapt">Adapt</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m3c')"></div>
+      <div class="task-body">
+        <div class="task-name">State tab — ESS comm + recording state breakdowns + history timeline</div>
+        <div class="task-dep">Two panels side-by-side: <strong>Communication state</strong> (current state type GUID via <code>milestone.cam.ess.comm.type[{$MS.CAM.ID}]</code> on Site host, last-change timestamp via <code>milestone.cam.ess.comm.time[{$MS.CAM.ID}]</code>, "OK" / "Not OK" derived by comparing type GUID against <code>{$MILESTONE.ESS.TYPE.COMMUNICATION_OK}</code>). <strong>Recording state</strong> (mirror — <code>milestone.cam.ess.rec.type</code>, <code>milestone.cam.ess.rec.time</code>, compared against <code>{$MILESTONE.ESS.TYPE.RECORDING_STARTED}</code>).
+          <br>Below: <strong>State history timeline</strong> — Zabbix history for <code>milestone.cam.ess.comm.type</code> + <code>milestone.cam.ess.rec.type</code> over the time period, rendered as a horizontal swim-lane (one lane per state group). State changes appear as colour transitions. Hover shows transition timestamp + from/to type GUIDs. Adapts the AP plan's recent-events timeline pattern.</div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">L</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m3c')"></div>
+      <div class="task-body">
+        <div class="task-name">Streams tab — codec / resolution / fps / bitrate</div>
+        <div class="task-dep">Per-stream info from Milestone API: <span class="ep">GET /api/rest/v1/cameras/{id}/streams</span> — returns per-channel stream config (codec, resolution, fps, target bitrate, retention). Live call (cached 5m widget-side via session). Render as a small table: Stream Name (Live / Live Profile / Recording), Codec, Resolution, FPS, Target Bitrate, GOP, Retention. <em>Stream actual-bitrate</em> if Milestone exposes it via the API — research in M0 if it's available, otherwise this tab is config-only and a separate Recording Bitrate KPI lives on the Servers tab of msserver (cumulative from RS perfcounter).
+          <div class="finding">Milestone /streams endpoint may return only config, not live stats. If so, stream-actual-bitrate falls back to the RS-level perfcounter "incoming bitrate per camera" if exposed. Verify in M0 vendor survey.</div>
+        </div>
+      </div>
+      <span class="tag t-ms">Milestone API</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m3c')"></div>
+      <div class="task-body">
+        <div class="task-name">Hardware tab — parent hw info + vendor SNMP block</div>
+        <div class="task-dep">Top: <strong>Parent Hardware card</strong> — hardware name, model, vendor, serial (if exposed by Milestone API), firmware version, PoE info if available. Source: live <span class="ep">GET /api/rest/v1/hardware/{$MS.CAM.HW.ID}</span> with 5m widget cache.
+          <br>Bottom: <strong>Vendor SNMP block</strong> — only renders if camera-host has the vendor sub-template linked. Reads <code>system.uptime</code> + vendor-specific items (Axis: temperature, failed-login spike, SD card status). Hidden if vendor unsupported. Reuse <code>apdetail</code>'s System Info KV renderer.</div>
+      </div>
+      <span class="tag t-cam">Camera direct</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m3c')"></div>
+      <div class="task-body">
+        <div class="task-name">Events tab — per-camera problems + recent ESS state changes</div>
+        <div class="task-dep">Filter Zabbix <code>event.get</code> to: this camera host + Site host events tagged <code>cam_id={$MS.CAM.ID}</code>. Time-window from dashboard. Plus: render the last 10 ESS state transitions (extracted from <code>milestone.cam.ess.raw[{$MS.CAM.ID}]</code> trend item via Zabbix history API with timestamp filtering). Same shape as M2 events tab.</div>
+      </div>
+      <span class="tag t-adapt">Adapt</span>
+      <span class="effort">S</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m3c')"></div>
+      <div class="task-body">
+        <div class="task-name">Optional: Live snapshot thumbnail (Overview tab)</div>
+        <div class="task-dep">Milestone API supports <span class="ep">GET /api/rest/v1/cameras/{id}/snapshot</span> returning a JPEG. Add a "Show snapshot" button on the Overview card that fetches + displays in-widget. Operator-triggered only — do not auto-fetch on widget open (would Milestone-spam at 100+ cams visible across an operator's day). Cache the response 60s widget-side.
+          <div class="design-change">→ Defer to M5 if M3 runs over schedule. Adds operator value but isn't on the critical path.</div>
+        </div>
+      </div>
+      <span class="tag t-minor">Minor add</span>
+      <span class="effort">M</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     M4 — msserver widget (Recording server / DVR detail)
+════════════════════════════════════════════════════════════════════ -->
+<div class="milestone" id="m4">
+  <div class="ms-head open" onclick="toggle(this,'m4c')">
+    <div class="ms-accent" style="background:var(--m4)"></div>
+    <div class="ms-info">
+      <div class="ms-title">M4 — <code>msserver</code> widget · Recording Server Detail
+        <span class="ms-badge" style="background:#0d2010;color:#a3e635;border:1px solid #2a4d1a">Blocks on M1 · runs parallel with M2 + M3</span>
+      </div>
+      <div class="ms-meta">Weeks 7–9 · per-RS deep-dive driven by <code>_hostid</code> broadcast from mssite Servers tab · five tabs · agent-side data is the new value here vs the existing template</div>
+    </div>
+    <div class="ms-right">
+      <span class="ms-count" id="m4-count"></span>
+      <span class="ms-pill" style="background:var(--m4)">2 wk</span>
+      <span class="ms-chevron open">▶</span>
+    </div>
+  </div>
+  <div class="ms-progress"><div class="ms-progress-bar" id="m4-bar" style="background:var(--m4)"></div></div>
+  <div class="tasks open" id="m4-tasks">
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m4c')"></div>
+      <div class="task-body">
+        <div class="task-name">Scaffold <code>msserver</code> module — namespace <code>TcsMsServer</code></div>
+        <div class="task-dep">Same skeleton clone. Form: <code>_hostid</code> = RS host id. Macros resolved on render: <code>{$MS.RS.ID}</code>, <code>{$MS.RS.HOSTNAME}</code>, <code>{$MS.RS.STORAGE.PATHS}</code>. Tab nav with <code>sessionStorage</code>.</div>
+      </div>
+      <span class="tag t-reuse">Reuse</span>
+      <span class="effort">S</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m4c')"></div>
+      <div class="task-body">
+        <div class="task-name">Overview tab — CPU/Mem/Disk rings + uptime + handshake age</div>
+        <div class="task-dep">Three donut rings — <strong>CPU</strong> (<code>system.cpu.util[,system]</code> + <code>[,user]</code> stacked), <strong>Memory</strong> (<code>vm.memory.utilization</code>), <strong>Worst Storage</strong> (max of all <code>vfs.fs.size[*,pused]</code> values from the storage LLD — drives the operator's eye to the volume in trouble). Behind each ring: 90-day sparkline. Reuse the AP plan's donut-ring renderer verbatim — source items differ, renderer identical.
+          <br>KV row underneath: Hostname, Version (from <code>milestone.rs.version[{$MS.RS.ID}]</code> on Site host), Uptime (from <code>system.uptime</code> on this RS host), Last handshake age (from <code>milestone.rs.handshake.age[{$MS.RS.ID}]</code> on Site host — colour badge: green &lt;60s, yellow 60–300, red &gt;300).
+          <div class="design-change">→ M2 on AP plan covers the ring renderer pattern in detail — port the SVG verbatim. This task is largely "wire correct items into existing renderer."</div>
+        </div>
+      </div>
+      <span class="tag t-adapt">Adapt</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m4c')"></div>
+      <div class="task-body">
+        <div class="task-name">Services tab — Milestone services strip</div>
+        <div class="task-dep">Render the service-discovery LLD output: one badge per discovered Milestone service (Recording Server, Event Server, Log Server, Management Server if present, Mobile Server if present). Each badge: service name, current state (valuemapped), uptime since last state change (from Zabbix item history). Click a badge → drill-down shows per-service item history table for that service (state transitions, ).
+          <br>Below the strip: <strong>Process metrics for VideoOS.Recorder.Service</strong> — RAM trend, handle count trend, CPU% trend. Three small sparklines side-by-side. Sourced from the perf_counter items on the RS host. Detects handle leaks (rising handle count = process leak) and RAM creep.</div>
+      </div>
+      <span class="tag t-agent">DVR agent</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m4c')"></div>
+      <div class="task-body">
+        <div class="task-name">Storage tab — per-volume bars + retention overlay + free-space sparklines</div>
+        <div class="task-dep">One row per discovered storage volume (LLD output from M1). Columns: Path (<code>{#FSPATH}</code>), Used / Total bar (% used + GB labels), Retention (from Milestone API — number of days configured, source: <code>milestone_rs_state.py</code>'s storage join), Free-space sparkline (last 30 days — visualizes archive churn rate; falling slope predicts when volume fills).
+          <br>Trend graph below: stacked area of free-space across all volumes for this RS, last 90 days. Helps identify storage growth trends.
+          <br><strong>"Predict full" calc</strong> (M5 polish): linear regression over last 30d of free-space → estimated days until volume fills. Surface as a badge on volumes with negative slope &gt; 1% per week.</div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">L</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m4c')"></div>
+      <div class="task-body">
+        <div class="task-name">Cameras tab — attached-camera roll-up</div>
+        <div class="task-dep">Table of cameras attached to this RS. Filter Site-host's camera-LLD output by <code>{#CAM.RS.ID} == {$MS.RS.ID}</code>. Columns: Name (links to mscamera via <code>_hostid</code> broadcast), IP, Vendor, Channel, Combined Status badge, ICMP latency (last value), Recording State badge (from ESS), Failed-login count if vendor SNMP is up.
+          <br>Filter pills above: All / Issues only / Disabled. Sort by status desc default.
+          <br>Empty state: "This RS has no cameras assigned in Milestone." (Possible if RS is freshly added or all its cameras were moved.)</div>
+      </div>
+      <span class="tag t-adapt">Adapt</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m4c')"></div>
+      <div class="task-body">
+        <div class="task-name">Events tab — Windows event log + per-RS Zabbix problems</div>
+        <div class="task-dep">Two-source merge: (1) <code>eventlog[Application,,Error,Milestone XProtect *]</code> — Error+ events from Milestone sources via Zabbix Agent. Render as table — timestamp, source, event ID, message. Filterable by source. (2) Zabbix problems on this RS host. Same merge pattern as mssite events tab.
+          <br>Decision: Windows-event-log items can be huge — bound the query to <code>{$MS.RS.EVTLOG.MAX_ROWS}</code> default 100. Operator can change in widget config field.</div>
+      </div>
+      <span class="tag t-agent">DVR agent</span>
+      <span class="effort">M</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     M5 — Polish, alerts, multi-site rollout, sign-off
+════════════════════════════════════════════════════════════════════ -->
+<div class="milestone" id="m5">
+  <div class="ms-head open" onclick="toggle(this,'m5c')">
+    <div class="ms-accent" style="background:var(--m5)"></div>
+    <div class="ms-info">
+      <div class="ms-title">M5 — Polish, alerts, multi-site, sign-off
+        <span class="ms-badge blocked">Blocks on M2–M4</span>
+      </div>
+      <div class="ms-meta">Weeks 10–12 · trigger work, additional vendor sub-templates, multi-site rollout, agent-deployment playbook for the rest of the DVR fleet, end-to-end testing</div>
+    </div>
+    <div class="ms-right">
+      <span class="ms-count" id="m5-count"></span>
+      <span class="ms-pill" style="background:var(--m5)">3 wk</span>
+      <span class="ms-chevron open">▶</span>
+    </div>
+  </div>
+  <div class="ms-progress"><div class="ms-progress-bar" id="m5-bar" style="background:var(--m5)"></div></div>
+  <div class="tasks open" id="m5-tasks">
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m5c')"></div>
+      <div class="task-body">
+        <div class="task-name">Trigger pass — alerts on the new per-host items</div>
+        <div class="task-dep">Audit triggers across all three new templates. Settle severities to avoid duplicate paging:
+          <br><strong>Site host</strong> (existing): Camera disabled WARNING, RS handshake stale &gt;5m HIGH, ESS snapshot stale WARNING, no-data-for-15m on camera/RS dependent masters AVERAGE. <em>Combined Status calc remains the canonical "camera offline" alert.</em>
+          <br><strong>Camera host</strong> (new): ICMP down 2m INFO only (G14), SNMP unreachable 5m INFO, vendor temperature &gt;60°C AVERAGE, &gt;70°C HIGH, vendor failed-login spike &gt;10/min WARNING.
+          <br><strong>RS host</strong> (new): Agent unreachable 2m HIGH, Milestone service stopped HIGH, storage volume &gt;90% used AVERAGE, &gt;95% HIGH, perfcounter handle-count growth &gt;20%/24h WARNING (handle leak detector).
+          <br>Output: trigger spreadsheet with severities, dependencies (e.g. ICMP-down depends on Combined-Status — suppresses INFO when HIGH already firing), and tag set per trigger.</div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m5c')"></div>
+      <div class="task-body">
+        <div class="task-name">Additional vendor sub-templates — Hanwha + Bosch + Hikvision</div>
+        <div class="task-dep">Three more sub-templates following the Axis pattern from M1. Each: SNMP items per the M0 vendor survey, conditional-link from the camera host_prototype keyed on <code>{#CAM.HW.VENDOR}</code>. Time-boxed at 2 days per vendor — if a vendor's SNMP is too sparse to be worth a sub-template, document and skip; ICMP-only is already a clean degraded mode.
+          <br>For Hikvision specifically: ISAPI HTTP endpoints are richer than SNMP. Consider a small JS Script item bundle (<code>milestone.cam.hikvision.deviceInfo</code> via HTTPRequest with digest auth) instead of/in addition to SNMP. Same for Dahua API.
+          <div class="design-change">→ If multi-vendor coverage outpaces M5 schedule, ship Axis-only and queue the others as a v1.1 enhancement. The architecture supports drop-in addition.</div>
+        </div>
+      </div>
+      <span class="tag t-cam">Camera direct</span>
+      <span class="effort">L</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m5c')"></div>
+      <div class="task-body">
+        <div class="task-name">DVR agent rollout playbook — install on production fleet</div>
+        <div class="task-dep">Document the agent install for the rest of the DVR fleet beyond the M0 pilot RS. Sections: (a) MSI deployment via SCCM / Group Policy, (b) firewall rules (allow inbound TCP 10050 from the Zabbix proxy IP, no outbound rules needed), (c) PSK key management (one PSK per RS host or one per site — pick the operationally cleanest), (d) post-install verification (agent.ping → service.info → storage discovery), (e) rollback procedure (uninstall MSI, remove host from Zabbix). Reference: Zabbix's official "Zabbix Agent 2 on Windows" install doc — don't reinvent.
+          <br>Output: <code>M5_DVR_Agent_Rollout.html</code>. Hand off to ops for fleet rollout — implementation outside this project scope, but the playbook unblocks them.</div>
+      </div>
+      <span class="tag t-agent">DVR agent</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m5c')"></div>
+      <div class="task-body">
+        <div class="task-name">Per-camera license drill-down (G8 follow-through)</div>
+        <div class="task-dep">Add a "License" tab on mscamera that, on first open, calls <span class="ep">GET /api/rest/v1/recordingServers/{rsId}/licenseDetails</span> and filters to this camera. Operator-triggered (lazy load) — keeps page-open cost zero. Cache 5 min widget-side. Renders: license category, expiry date, SLC, license code (last 4 chars only — security). If unlicensed: red banner with "Camera not licensed." If license expires &lt; 30 days: amber banner.
+          <div class="finding">Predicted scope: Milestone /licenseDetails returns per-camera license rows under each RS. Validate field shape in M0 — if the call has a different per-RS auth requirement (eg per-RS bearer), defer this task.</div>
+        </div>
+      </div>
+      <span class="tag t-ms">Milestone API</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m5c')"></div>
+      <div class="task-body">
+        <div class="task-name">Storage "predict full" calculation</div>
+        <div class="task-dep">M4 deferred this. Linear regression on <code>vfs.fs.size[{#FSPATH},free]</code> over last 30 days → estimated days until volume fills at current churn rate. Surface as KV badge on the Storage tab volume row: green &gt;90 days, amber 30–90, red &lt;30. Trigger: predicted-full &lt; 14 days → AVERAGE. Implementation: Zabbix calculated item with <code>trendvalue</code> + <code>fits</code> built-ins — no JS needed.</div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">S</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m5c')"></div>
+      <div class="task-body">
+        <div class="task-name">Multi-site validation</div>
+        <div class="task-dep">Roll out the three templates + three widgets to a second Milestone site (medium scale: 100–500 cameras, 2–4 RSs). Run for one full week. Verify: (1) ICMP load on proxy stays manageable per the {$MILESTONE.CAM.PING.INTERVAL} sizing table (G12), (2) honeycomb performance at 500 cameras (custom SVG should be fine — flag if not), (3) cross-site host name uniqueness — site prefix macro working as designed (G3), (4) trigger noise level acceptable (no alert storm during a full backup run, etc.).
+          <br>Then production rollout to a third site at full scale (2500+ cameras, 10+ RSs). Observe for 3 days. Document any new gotchas as G16+ Milestone-specific.</div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">L</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m5c')"></div>
+      <div class="task-body">
+        <div class="task-name">Permissions audit — non-admin operator role</div>
+        <div class="task-dep">Define a Zabbix user role that gives operators read access to: (a) Site host, (b) Discovered Cameras host group, (c) Discovered Recording Servers host group, (d) the three custom widgets. <em>No</em> access to the Site-host's secret macros (Milestone password, SNMP creds, agent PSK keys). Test with a dummy operator account: dashboard renders fully, drill-downs work, but they can't view <code>{$MILESTONE.PASSWORD}</code> in host config.
+          <div class="finding">Zabbix 7.x role-based permissions support exactly this — tag-based access on the Discovered groups means operators can be limited to a single site's cameras + RSs by site tag.</div>
+        </div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m5c')"></div>
+      <div class="task-body">
+        <div class="task-name">Dashboard wiring — Camera/RS Navigators + cross-widget broadcasts</div>
+        <div class="task-dep">Final dashboard layout per <code>M0_Widget_Design.html</code>. Navigator widgets:
+          <br>(a) <strong>Camera Navigator</strong> (native Zabbix Host Navigator filtered to <code>Discovered Cameras</code> group + camera-host tag — drives mscamera via <code>_hostid</code> broadcast).
+          <br>(b) <strong>RS Navigator</strong> (Host Navigator filtered to <code>Discovered Recording Servers</code> — drives msserver).
+          <br>(c) Site host item card (top-left, identity).
+          <br>(d) <code>mssite</code> widget (large center).
+          <br>(e) <code>mscamera</code> + <code>msserver</code> drill-downs (right rail or bottom row, hidden until selection).
+          <br>Wire <code>_timeperiod</code> from the dashboard time selector to all three widget instances. Confirm <code>_hostid</code> broadcast from honeycomb cells reaches mscamera correctly. Test the click-from-mssite-Servers-tab → msserver path.</div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">M</span>
+    </div>
+
+    <div class="task">
+      <div class="task-check" onclick="check(this,'m5c')"></div>
+      <div class="task-body">
+        <div class="task-name">End-to-end testing &amp; sign-off</div>
+        <div class="task-dep">Full dashboard load on the production site at scale. Test matrix: every widget instance, every tab, every filter pill, every drill-down path, time-period changes, dashboard refresh, sessionStorage tab persistence, Milestone API unreachable (graceful degradation — empty states), agent unreachable on a RS (msserver Overview shows "Agent offline" badge, doesn't error), camera unreachable (mscamera shows ICMP down, otherwise renders), license endpoint slow (loading skeleton). Sign off the M5 closeout — <code>M5_Milestone_Closeout.html</code>.
+          <br>v1.0 ship gate: pilot site green for 7 consecutive days + medium site green for 3 days + full-scale site green for 24h.</div>
+      </div>
+      <span class="tag t-new">Net-new</span>
+      <span class="effort">L</span>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+const milestones = ['m0','m1','m2','m3','m4','m5'];
+
+function toggle(head, ms) {
+  const tasks = document.getElementById(ms + '-tasks');
+  const chevron = head.querySelector('.ms-chevron');
+  const open = tasks.classList.toggle('open');
+  head.classList.toggle('open', open);
+  chevron.classList.toggle('open', open);
+}
+
+function check(box, ms) {
+  box.classList.toggle('done');
+  const name = box.nextElementSibling.querySelector('.task-name');
+  name.classList.toggle('done', box.classList.contains('done'));
+  updateCounts();
+}
+
+function updateCounts() {
+  let totalDone = 0, total = 0;
+  milestones.forEach(ms => {
+    const checks = document.querySelectorAll('#' + ms + '-tasks .task-check');
+    const done   = document.querySelectorAll('#' + ms + '-tasks .task-check.done');
+    const pct = checks.length ? (done.length / checks.length) * 100 : 0;
+    document.getElementById(ms + '-bar').style.width = pct + '%';
+    document.getElementById(ms + '-count').textContent = done.length + ' / ' + checks.length;
+    totalDone += done.length;
+    total     += checks.length;
+  });
+  document.getElementById('done-count').textContent = totalDone + ' / ' + total;
+  document.getElementById('progress-bar').style.width = (total ? (totalDone / total) * 100 : 0) + '%';
+}
+
+// Init
+document.querySelectorAll('.ms-head').forEach(h => h.classList.add('open'));
+updateCounts();
+</script>
+</body>
+</html>

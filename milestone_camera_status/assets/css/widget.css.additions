@@ -1,0 +1,87 @@
+/* ====================================================================
+ * Append these rules to the end of assets/css/widget.css.
+ * They cover: clickable fault tiles + selected-state styling, and
+ * the filter bar above the table with its "Show all" button.
+ * ==================================================================== */
+
+/* ---------- Clickable fault tiles ---------- */
+
+div.dashboard-widget-milestone_camera_status .mcs-tile--clickable {
+    cursor: pointer;
+    transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+div.dashboard-widget-milestone_camera_status .mcs-tile--clickable:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+/* Keyboard-focus ring (tile has role=button, tabindex=0). Use a soft
+   inset outline so it works on both light and dark themes without
+   conflicting with the per-state border-left accent. */
+div.dashboard-widget-milestone_camera_status .mcs-tile--clickable:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(100, 150, 255, 0.55) inset;
+}
+div.dashboard-widget-milestone_camera_status .mcs-tile--clickable:focus:not(:focus-visible) {
+    box-shadow: none;
+}
+
+/* Selected state — the tile that's currently filtering the table.
+   Stronger background tint than --active alone, and a thicker accent
+   border so the operator can't miss which view they're in. */
+div.dashboard-widget-milestone_camera_status .mcs-tile--selected {
+    background: rgba(100, 150, 255, 0.16);
+    border-left-width: 5px;
+    padding-left: 2px;  /* compensate for the +2px border so contents don't shift */
+}
+div.dashboard-widget-milestone_camera_status .mcs-tile--selected .mcs-tile-label {
+    opacity: 1;
+}
+
+/* ---------- Filter bar (above the table) ---------- */
+
+div.dashboard-widget-milestone_camera_status .mcs-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 8px;
+    background: rgba(100, 150, 255, 0.08);
+    border-bottom: 1px solid rgba(100, 150, 255, 0.25);
+    font-size: 11px;
+    /* Sticky so it stays visible alongside the sticky header when the
+       table scrolls. Top offset lines up below the table headers. */
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+div.dashboard-widget-milestone_camera_status .mcs-filter-bar[hidden] {
+    display: none;
+}
+
+div.dashboard-widget-milestone_camera_status .mcs-filter-label {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    flex: 1 1 auto;
+}
+
+div.dashboard-widget-milestone_camera_status .mcs-filter-clear {
+    flex: 0 0 auto;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-family: inherit;
+    color: inherit;
+    background: rgba(127, 127, 127, 0.15);
+    border: 1px solid rgba(127, 127, 127, 0.3);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+div.dashboard-widget-milestone_camera_status .mcs-filter-clear:hover {
+    background: rgba(127, 127, 127, 0.28);
+}
+div.dashboard-widget-milestone_camera_status .mcs-filter-clear:focus {
+    outline: 2px solid rgba(100, 150, 255, 0.55);
+    outline-offset: 1px;
+}

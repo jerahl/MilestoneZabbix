@@ -1,0 +1,372 @@
+/*
+ * Milestone camera status widget — styles.
+ *
+ * Theme-aware via CSS custom properties from Zabbix's stylesheet.
+ * Specifically these vars are exposed by Zabbix's main CSS:
+ *   --widget-body-color, --widget-body-bg
+ *   --table-stripe-color
+ *   --status-disaster-color, --status-high-color,
+ *   --status-average-color, --status-warning-color,
+ *   --status-info-color, --status-na-color
+ * We use them so the widget follows light/dark theme switching for free.
+ */
+
+div.dashboard-widget-milestone_camera_status .mcs-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100%;
+    padding: 4px;
+    box-sizing: border-box;
+    overflow: hidden;
+    font-size: 12px;
+}
+
+/* ---------- Summary tile row ---------- */
+
+div.dashboard-widget-milestone_camera_status .mcs-summary {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+    flex: 0 0 auto;
+}
+
+div.dashboard-widget-milestone_camera_status .mcs-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 4px;
+    border-radius: 4px;
+    background: rgba(127, 127, 127, 0.08);
+    border-left: 3px solid transparent;
+    min-width: 0;
+}
+
+div.dashboard-widget-milestone_camera_status .mcs-tile-value {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+div.dashboard-widget-milestone_camera_status .mcs-tile-label {
+    margin-top: 4px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    text-align: center;
+}
+
+/* Per-state accent colour — matches Zabbix's severity vocabulary so the
+   widget reads naturally alongside Problems/Honeycomb widgets on the
+   same dashboard. */
+div.dashboard-widget-milestone_camera_status .mcs-tile--ok {
+    border-left-color: var(--status-na-color, #59db8f);
+}
+div.dashboard-widget-milestone_camera_status .mcs-tile--ess {
+    border-left-color: var(--status-warning-color, #ffd54f);
+}
+div.dashboard-widget-milestone_camera_status .mcs-tile--ping {
+    border-left-color: var(--status-average-color, #ff9800);
+}
+div.dashboard-widget-milestone_camera_status .mcs-tile--both {
+    border-left-color: var(--status-disaster-color, #ff465c);
+}
+div.dashboard-widget-milestone_camera_status .mcs-tile--disabled {
+    border-left-color: var(--status-info-color, #7c7c7c);
+}
+div.dashboard-widget-milestone_camera_status .mcs-tile--total,
+div.dashboard-widget-milestone_camera_status .mcs-tile--nodata {
+    border-left-color: rgba(127, 127, 127, 0.3);
+}
+
+/* When a fault tile has count > 0, raise its background for emphasis. */
+div.dashboard-widget-milestone_camera_status .mcs-tile--active {
+    background: rgba(255, 70, 92, 0.10);
+}
+div.dashboard-widget-milestone_camera_status .mcs-tile--ess.mcs-tile--active {
+    background: rgba(255, 213, 79, 0.14);
+}
+div.dashboard-widget-milestone_camera_status .mcs-tile--ping.mcs-tile--active {
+    background: rgba(255, 152, 0, 0.14);
+}
+
+/* ---------- Fault table ---------- */
+
+div.dashboard-widget-milestone_camera_status .mcs-table-wrap {
+    flex: 1 1 auto;
+    overflow: auto;
+    border-top: 1px solid rgba(127, 127, 127, 0.2);
+}
+
+div.dashboard-widget-milestone_camera_status table.mcs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+div.dashboard-widget-milestone_camera_status table.mcs-table th,
+div.dashboard-widget-milestone_camera_status table.mcs-table td {
+    padding: 4px 8px;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 0;  /* needed alongside table-layout for ellipsis to work */
+}
+
+div.dashboard-widget-milestone_camera_status table.mcs-table {
+    table-layout: fixed;
+}
+
+/* Column widths: Severity | Camera | MAC | IP | Last check.
+   Severity, MAC, IP, and Last check are fixed-ish; Camera flexes to
+   absorb leftover space.
+
+   Width sources:
+     - MAC: aa:bb:cc:dd:ee:ff is 17 chars at ~7.5px in the mono font
+       used here (~128px), plus 16px of cell padding → 170px gives a
+       small margin so the value doesn't run right up to the column edge.
+     - IP: 'xxx.xxx.xxx.xxx' worst case is 15 chars (~115px) plus
+       padding → 150px is comfortable for IPv4. (IPv6 still wraps; the
+       widget displays IPv4 here.)
+     - Last check: locale-formatted dates can run up to ~22 chars
+       depending on browser (e.g. '12/31/2025, 11:59:59 PM') →
+       195px keeps it on one line in en-US.
+*/
+div.dashboard-widget-milestone_camera_status table.mcs-table th:nth-child(1) {
+    /*width: 90px;*/
+}
+div.dashboard-widget-milestone_camera_status table.mcs-table th:nth-child(3) {
+    /*width: 170px;*/
+}
+div.dashboard-widget-milestone_camera_status table.mcs-table th:nth-child(4) {
+    /*width: 150px;*/
+}
+div.dashboard-widget-milestone_camera_status table.mcs-table th:nth-child(5) {
+    /*width: 195px;*/
+}
+
+div.dashboard-widget-milestone_camera_status table.mcs-table thead th {
+    position: sticky;
+    top: 0;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid rgba(127, 127, 127, 0.3);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+/* Sort indicator triangles — pure CSS, no icon font. */
+div.dashboard-widget-milestone_camera_status table.mcs-table thead th::after {
+    content: '';
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin-left: 6px;
+    vertical-align: middle;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+div.dashboard-widget-milestone_camera_status table.mcs-table thead th.mcs-sort-asc::after {
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid currentColor;
+    opacity: 0.7;
+}
+div.dashboard-widget-milestone_camera_status table.mcs-table thead th.mcs-sort-desc::after {
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid currentColor;
+    opacity: 0.7;
+}
+
+div.dashboard-widget-milestone_camera_status table.mcs-table tbody tr:nth-child(even) {
+    background: var(--table-stripe-color, rgba(127, 127, 127, 0.05));
+}
+
+div.dashboard-widget-milestone_camera_status table.mcs-table a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dotted rgba(127, 127, 127, 0.4);
+}
+div.dashboard-widget-milestone_camera_status table.mcs-table a:hover {
+    border-bottom-style: solid;
+}
+
+div.dashboard-widget-milestone_camera_status .mcs-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+}
+div.dashboard-widget-milestone_camera_status .mcs-dim {
+    opacity: 0.65;
+}
+
+/* ---------- Severity pills ---------- */
+
+div.dashboard-widget-milestone_camera_status .mcs-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #fff;
+    line-height: 1.4;
+}
+div.dashboard-widget-milestone_camera_status .mcs-pill--ess {
+    background: var(--status-warning-color, #ffd54f);
+    color: #333;
+}
+div.dashboard-widget-milestone_camera_status .mcs-pill--ping {
+    background: var(--status-average-color, #ff9800);
+}
+div.dashboard-widget-milestone_camera_status .mcs-pill--both {
+    background: var(--status-disaster-color, #ff465c);
+}
+div.dashboard-widget-milestone_camera_status .mcs-pill--unknown {
+    background: rgba(127, 127, 127, 0.5);
+}
+
+/* ---------- Empty / error state ---------- */
+
+div.dashboard-widget-milestone_camera_status .mcs-empty {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    opacity: 0.7;
+}
+
+/* ---------- Truncation notice ---------- */
+
+div.dashboard-widget-milestone_camera_status .mcs-truncated {
+    padding: 4px 8px;
+    font-size: 11px;
+    text-align: center;
+    opacity: 0.7;
+    border-top: 1px dashed rgba(127, 127, 127, 0.3);
+}
+
+/* Tighter layout on narrow widgets (< ~5 grid units wide). */
+@media (max-width: 600px) {
+    div.dashboard-widget-milestone_camera_status .mcs-summary {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    div.dashboard-widget-milestone_camera_status .mcs-tile-value {
+        font-size: 16px;
+    }
+}
+/* ---------- Clickable fault tiles ---------- */
+
+div.dashboard-widget-milestone_camera_status .mcs-tile--clickable {
+    cursor: pointer;
+    transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+div.dashboard-widget-milestone_camera_status .mcs-tile--clickable:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+/* Keyboard-focus ring (tile has role=button, tabindex=0). Use a soft
+   inset outline so it works on both light and dark themes without
+   conflicting with the per-state border-left accent. */
+div.dashboard-widget-milestone_camera_status .mcs-tile--clickable:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(100, 150, 255, 0.55) inset;
+}
+div.dashboard-widget-milestone_camera_status .mcs-tile--clickable:focus:not(:focus-visible) {
+    box-shadow: none;
+}
+
+/* Selected state — the tile that's currently filtering the table.
+   Stronger background tint than --active alone, and a thicker accent
+   border so the operator can't miss which view they're in. */
+div.dashboard-widget-milestone_camera_status .mcs-tile--selected {
+    background: rgba(100, 150, 255, 0.16);
+    border-left-width: 5px;
+    padding-left: 2px;  /* compensate for the +2px border so contents don't shift */
+}
+div.dashboard-widget-milestone_camera_status .mcs-tile--selected .mcs-tile-label {
+    opacity: 1;
+}
+
+/* ---------- Filter bar (above the table) ---------- */
+
+div.dashboard-widget-milestone_camera_status .mcs-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 8px;
+    background: rgba(100, 150, 255, 0.08);
+    border-bottom: 1px solid rgba(100, 150, 255, 0.25);
+    font-size: 11px;
+    /* Sticky so it stays visible alongside the sticky header when the
+       table scrolls. Top offset lines up below the table headers. */
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+div.dashboard-widget-milestone_camera_status .mcs-filter-bar[hidden] {
+    display: none;
+}
+
+div.dashboard-widget-milestone_camera_status .mcs-filter-label {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    flex: 1 1 auto;
+}
+
+div.dashboard-widget-milestone_camera_status .mcs-filter-clear {
+    flex: 0 0 auto;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-family: inherit;
+    color: inherit;
+    background: rgba(127, 127, 127, 0.15);
+    border: 1px solid rgba(127, 127, 127, 0.3);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+div.dashboard-widget-milestone_camera_status .mcs-filter-clear:hover {
+    background: rgba(127, 127, 127, 0.28);
+}
+div.dashboard-widget-milestone_camera_status .mcs-filter-clear:focus {
+    outline: 2px solid rgba(100, 150, 255, 0.55);
+    outline-offset: 1px;
+}
+
+/* ---------- Clickable rows (broadcast camera selection) ---------- */
+
+div.dashboard-widget-milestone_camera_status table.mcs-table tbody tr.mcs-row-clickable {
+    cursor: pointer;
+    transition: background 0.10s ease;
+}
+div.dashboard-widget-milestone_camera_status table.mcs-table tbody tr.mcs-row-clickable:hover {
+    /* Use a subtle blue tint, similar to the filter bar, so it's clear
+       the row is interactive but the existing zebra striping still
+       shows through underneath. */
+    background: rgba(100, 150, 255, 0.12);
+}
+
+/* Inline link inside a clickable row should still feel like a link.
+   Override the row hover background so the underline-on-hover affordance
+   is preserved when the operator is targeting the link specifically. */
+div.dashboard-widget-milestone_camera_status table.mcs-table tbody tr.mcs-row-clickable a:hover {
+    border-bottom-style: solid;
+}
