@@ -85,6 +85,38 @@ in `PER_IMAGER_TEMPLATES` and `PER_DEVICE_OIDS`.
 
 Append findings to `M0_Bosch_SNMP_Walk_Analysis.md` §3 (alarms subtree).
 
+### Troubleshooting
+
+The script runs a **pre-flight** before doing anything Bosch-specific: it
+`snmpget`s `sysDescr.0` (`.1.3.6.1.2.1.1.1.0`) to confirm basic SNMP works.
+
+- **Pre-flight fails** → SNMP itself is broken. The error message includes
+  the underlying `snmpwalk`/`snmpget` stderr plus a one-line hint matched
+  against common net-snmp error strings (`Timeout`, `unknown user`,
+  `authentication failure`, `wrong digest`, `unknown community`, etc.).
+- **Pre-flight passes but the Bosch private-MIB walk returns nothing** →
+  SNMP works but `.1.3.6.1.4.1.3967.1.1.1.3.1.1` is empty. Either this
+  isn't a Bosch camera, or the Bosch SNMP module is disabled. Confirm
+  vendor with `snmpget -v2c -c <comm> <host> 1.3.6.1.2.1.1.1.0` — the
+  `sysDescr.0` string should mention `Bosch`, or kernel codename
+  `arc-cam` (FLEXIDOME family) / `co-cam` (multi-imager / 7000i family).
+
+For the noisy case — full `snmpwalk`/`snmpget` command lines and rc/stderr
+on every call:
+
+```sh
+./bosch_motion_probe.py 10.24.18.22 --debug --once 2>&1 | less
+```
+
+Common Bosch-specific footguns:
+
+| Symptom | Likely cause |
+|---|---|
+| Pre-flight times out | SNMP not enabled in the Bosch UI under Configuration → Service → SNMP, OR camera ACL blocks the proxy host |
+| `unknown community` / `noAccess` | Recent Bosch firmware ships with SNMPv1/v2c DISABLED. Use `--version 3` with an operator-created v3 user. |
+| v3 `authenticationFailure` | The default `service` account does NOT have SNMP access. Create a dedicated read-only v3 user in the Bosch UI. |
+| v3 `wrong digest` or `decryption error` | Auth/priv passwords or protocols wrong. Bosch typically defaults to **SHA + AES**. |
+
 ### Exit codes
 
 | Code | Meaning |

@@ -145,6 +145,8 @@ class SnmpClient:
         self.host = args.host
         self.timeout = args.timeout
         self.retries = args.retries
+        self.debug = getattr(args, "debug", False)
+        self.last_stderr: str = ""           # most recent snmp stderr — surfaced in error paths
 
         # Build the common arg list for v1/v2c vs v3
         if args.version in ("1", "2c"):
@@ -164,6 +166,67 @@ class SnmpClient:
             if shutil.which(tool) is None:
                 fatal(f"required binary {tool!r} not found in $PATH "
                       f"(install net-snmp / net-snmp-utils)")
+
+    def preflight(self) -> None:
+        """Confirm basic SNMP works before doing the imager discovery walk.
+
+        Tries to GET sysDescr.0 (.1.3.6.1.2.1.1.1.0) — every camera serves this.
+        Failure here means SNMP itself is broken (wrong version, wrong community,
+        unreachable, blocked port, etc.). Failure later (on the imager-name walk)
+        means SNMP works but the Bosch private branch isn't there — i.e. wrong
+        vendor, or SNMP enabled but Bosch MIB module disabled.
+        """
+        cmd = ["snmpget", *self._common(), self.host, "1.3.6.1.2.1.1.1.0"]
+        rc, stdout, stderr = self._run(cmd)
+        if rc != 0 or not stdout.strip():
+            err = (stderr.decode("utf-8", errors="replace").strip()
+                   or stdout.decode("utf-8", errors="replace").strip()
+                   or "(no output)")
+            hint = self._diagnose(err)
+            fatal(
+                f"SNMP pre-flight failed against {self.host}\n"
+                f"  command : {shlex.join(cmd)}\n"
+                f"  stderr  : {err}\n"
+                f"  {hint}"
+            )
+        # Pre-flight succeeded — surface the camera identity so the operator knows
+        # they reached *something*, even if it turns out not to be a Bosch.
+        text = stdout.decode("utf-8", errors="replace").strip()
+        if self.debug:
+            print(f"# preflight ok: {text}", file=sys.stderr)
+
+    @staticmethod
+    def _diagnose(stderr: str) -> str:
+        """Translate a net-snmp error string into an operator-actionable hint."""
+        s = stderr.lower()
+        if "timeout" in s or "no response" in s:
+            return ("hint: camera didn't respond on UDP/161. Check (a) ICMP reachability, "
+                    "(b) SNMP is enabled in the Bosch browser UI under "
+                    "Configuration → General → Network → SNMP, "
+                    "(c) the proxy isn't blocked by an ACL.")
+        if "authentication" in s or "authenticationfailure" in s or "auth failure" in s:
+            return ("hint: SNMPv3 auth failed. Check --v3-user, --v3-auth-proto "
+                    "(MD5 vs SHA), --v3-auth-pass, --v3-priv-proto (DES vs AES), "
+                    "--v3-priv-pass. Bosch v3 users are configured per-camera; the "
+                    "default 'service' account does NOT have SNMP access — create a "
+                    "dedicated read-only user.")
+        if "unknown user" in s or "usmstatsunknownusernames" in s:
+            return ("hint: SNMPv3 user not configured on the camera. Create one in the "
+                    "Bosch UI under Configuration → Service → SNMP.")
+        if "unknown community" in s or "no access" in s or "noaccess" in s:
+            return ("hint: SNMPv1/v2c community wrong, or v1/v2c disabled. Recent Bosch "
+                    "firmware ships with v1/v2c DISABLED — try --version 3 with an "
+                    "operator-created v3 user.")
+        if "wrong digest" in s or "decryption" in s or "snmpv3 message processing" in s:
+            return ("hint: v3 auth or priv password wrong, or wrong protocol "
+                    "(MD5 vs SHA, DES vs AES). Bosch typically defaults to SHA+AES.")
+        if "unknown host" in s or "name or service not known" in s or "nodename nor servname" in s:
+            return "hint: DNS lookup failed — pass an IP address instead, or fix /etc/hosts."
+        if "permission denied" in s:
+            return "hint: local sandboxing blocking outbound UDP/161. Run from the proxy host."
+        return ("hint: re-run with --debug to see the full snmp command, "
+                "or try a manual `snmpwalk -v2c -c <community> <host> 1.3.6.1.2.1.1` "
+                "to isolate whether it's an SNMP problem or a Bosch-private-MIB problem.")
 
     def _common(self) -> list[str]:
         return self._auth + [
@@ -196,7 +259,12 @@ class SnmpClient:
     def walk(self, root_oid: str) -> dict[str, str]:
         """Walk a sub-tree. Returns {oid: value-stripped}."""
         cmd = ["snmpwalk", *self._common(), self.host, root_oid]
-        rc, stdout, _stderr = self._run(cmd)
+        rc, stdout, stderr = self._run(cmd)
+        self.last_stderr = stderr.decode("utf-8", errors="replace").strip()
+        if self.debug:
+            print(f"# walk cmd: {shlex.join(cmd)}", file=sys.stderr)
+            print(f"# walk rc={rc} stdout={len(stdout)}B stderr={self.last_stderr!r}",
+                  file=sys.stderr)
         if rc != 0:
             return {}
         out: dict[str, str] = {}
@@ -250,9 +318,21 @@ def discover_imagers(snmp: SnmpClient) -> list[tuple[int, str]]:
     """Walk .3967.1.1.1.3.1.1 and return [(idx, name), ...]."""
     rows = snmp.walk(IMAGER_NAME_TABLE_ROOT)
     if not rows:
-        # The walk failing usually means camera unreachable or auth wrong —
-        # discovered_imagers == [] would silently produce an empty watch list.
-        fatal(f"could not walk {IMAGER_NAME_TABLE_ROOT} — check host / auth")
+        # SNMP basic reachability already validated via preflight(), so an empty
+        # walk here means: camera *responds* but doesn't expose the Bosch private
+        # branch. Either it's not a Bosch, or SNMP is on but the Bosch MIB module
+        # is disabled.
+        hint = snmp._diagnose(snmp.last_stderr) if snmp.last_stderr else (
+            "hint: SNMP works (preflight passed) but .3967.1.1.1.3.1.1 returned "
+            "no rows. Either this isn't a Bosch camera, or the Bosch SNMP module "
+            "is disabled. Confirm vendor with: snmpget -v2c -c <comm> <host> "
+            "1.3.6.1.2.1.1.1.0  → should mention 'Bosch' or 'arc-cam'/'co-cam'."
+        )
+        fatal(
+            f"could not walk {IMAGER_NAME_TABLE_ROOT}\n"
+            f"  stderr  : {snmp.last_stderr or '(empty — likely no Bosch branch on this device)'}\n"
+            f"  {hint}"
+        )
     out: list[tuple[int, str]] = []
     for oid, value in rows.items():
         # OID looks like .1.3.6.1.4.1.3967.1.1.1.3.1.1.<idx>
@@ -320,6 +400,7 @@ def print_change(oid: str, old: str, new: str, label: str) -> None:
 # Modes
 # ─────────────────────────────────────────────────────────────────────────────
 def cmd_watch(snmp: SnmpClient, args: argparse.Namespace) -> int:
+    snmp.preflight()
     identity = snmp.get_many(list(IDENTITY_OIDS.keys()))
     imagers = discover_imagers(snmp)
     watched = build_watch_oids(imagers)
@@ -358,6 +439,7 @@ def cmd_watch(snmp: SnmpClient, args: argparse.Namespace) -> int:
 
 
 def cmd_once(snmp: SnmpClient, args: argparse.Namespace) -> int:
+    snmp.preflight()
     identity = snmp.get_many(list(IDENTITY_OIDS.keys()))
     imagers = discover_imagers(snmp)
     watched = build_watch_oids(imagers)
@@ -432,6 +514,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--v3-priv-pass", default="")
     p.add_argument("--timeout", type=int, default=2, help="snmpget timeout in seconds (default 2)")
     p.add_argument("--retries", type=int, default=1, help="snmpget retry count (default 1)")
+    p.add_argument("--debug", action="store_true",
+                   help="print every snmp command and its stderr (for troubleshooting)")
 
     # Mode
     p.add_argument("--once", action="store_true",
