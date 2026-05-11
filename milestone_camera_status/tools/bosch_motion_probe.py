@@ -77,7 +77,7 @@ from typing import Any
 # Per-imager OIDs use the placeholder {idx} which gets expanded at discovery
 # time based on how many imagers the camera reports in .3967.1.1.1.3.1.1.
 # ─────────────────────────────────────────────────────────────────────────────
-BOSCH = "1.3.6.1.4.1.3967.1"
+BOSCH = "1.3.6.1.4.1.3967"
 
 # Per-imager — one row per logical imager (1 on a 5100i, 4 on a 7000i multi)
 PER_IMAGER_TEMPLATES: dict[str, str] = {
