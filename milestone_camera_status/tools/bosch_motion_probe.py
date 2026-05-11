@@ -126,13 +126,99 @@ IDENTITY_OIDS: dict[str, str] = {
 
 
 # G29 — net-snmpd on Bosch returns octet strings with trailing binary garbage.
-# Strip everything after the first non-printable byte.
+# Strip everything after the first non-printable byte. Applied to printable text
+# values only — hex-strings (which are space-separated 2-char nibble pairs and
+# would otherwise be passed through whole) are detected by the type-prefix and
+# left alone.
 G29_STRIP = re.compile(rb"^([\x20-\x7E]*).*", re.DOTALL)
+HEX_VALUE_RE = re.compile(r"^(?:[0-9A-Fa-f]{2}\s*)+$")
 
 
 def strip_g29(raw: bytes) -> str:
     m = G29_STRIP.match(raw)
     return (m.group(1) if m else raw).decode("ascii", errors="replace").rstrip()
+
+
+# Symbolic OID prefixes net-snmp emits when MIBs are loaded in /etc/snmp/snmp.conf.
+# `-Oqn` *should* force numeric output, but on some builds it's not enough —
+# normalise both forms here so the script works regardless of the host's snmp.conf.
+OID_PREFIX_REWRITES = [
+    ("SNMPv2-SMI::enterprises.", "1.3.6.1.4.1."),
+    ("SNMPv2-SMI::mib-2.", "1.3.6.1.2.1."),
+    ("SNMPv2-SMI::private.", "1.3.6.1.4.1."),
+    ("iso.org.dod.internet.private.enterprises.", "1.3.6.1.4.1."),
+    ("iso.org.dod.internet.mgmt.mib-2.", "1.3.6.1.2.1."),
+    ("iso.3.6.1.4.1.", "1.3.6.1.4.1."),
+    ("iso.3.6.1.2.1.", "1.3.6.1.2.1."),
+    ("iso.", "1."),                # last-ditch — covers raw `iso.X.X…` output
+]
+
+
+def normalize_oid(oid: str) -> str:
+    oid = oid.lstrip(".")
+    for sym, num in OID_PREFIX_REWRITES:
+        if oid.startswith(sym):
+            return num + oid[len(sym):]
+    return oid
+
+
+def _strip_type_prefix(raw: str) -> str:
+    """`STRING: "Camera 1"` → `"Camera 1"`. Pass-through if no prefix."""
+    m = re.match(r"^([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$", raw, re.DOTALL)
+    return m.group(2) if m else raw
+
+
+def parse_snmp_text(text: str) -> dict[str, str]:
+    """Parse snmpwalk / snmpget output. Handles:
+      - quick (`-Oq`)  : '.1.2.3 "value"'
+      - verbose default: 'OID = TYPE: value'
+      - symbolic OIDs  : 'SNMPv2-SMI::enterprises.3967.X = …'
+      - multi-line hex : continuation lines for wrapped Hex-STRING values.
+    Returns {numeric-oid (no leading dot): cleaned-value-string}.
+    """
+    rows: dict[str, str] = {}
+    current_oid: str | None = None
+    current_parts: list[str] = []
+
+    def flush() -> None:
+        nonlocal current_oid, current_parts
+        if current_oid is None:
+            return
+        raw = " ".join(p.strip() for p in current_parts if p.strip())
+        raw = _strip_type_prefix(raw).strip()
+        # Unquote outer double-quotes
+        if len(raw) >= 2 and raw[0] == '"' and raw.endswith('"'):
+            raw = raw[1:-1]
+        # Apply G29 strip only to free text — leave hex-strings alone.
+        if HEX_VALUE_RE.match(raw):
+            cleaned = raw
+        else:
+            cleaned = strip_g29(raw.encode("utf-8", errors="replace"))
+        rows[current_oid] = cleaned
+        current_oid = None
+        current_parts = []
+
+    for line in text.splitlines():
+        s = line.rstrip()
+        if not s:
+            continue
+        # Drop noSuchObject / End-of-MIB markers — these aren't data.
+        if ("No Such" in s) or s.startswith("End of MIB") or ("No more variables" in s):
+            continue
+        # A new OID line starts with optional '.', then a token containing at
+        # least one '.' or '::' (so 'eth0' continuation lines don't trigger).
+        # The token is followed by either ' = ' (verbose) or whitespace (quick).
+        m = re.match(r"^\.?([A-Za-z0-9_:.-]+?)\s*(=|\s)\s*(.*)$", s)
+        if m and ("." in m.group(1) or "::" in m.group(1)):
+            flush()
+            current_oid = normalize_oid(m.group(1))
+            current_parts = [m.group(3)]
+        else:
+            # Continuation of previous (e.g. multi-line Hex-STRING)
+            if current_oid is not None:
+                current_parts.append(s.strip())
+    flush()
+    return rows
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -230,8 +316,14 @@ class SnmpClient:
 
     def _common(self) -> list[str]:
         return self._auth + [
-            "-Oqn",                       # numeric OID + quick value (one line each)
-            "-OU",                        # don't strip OID instances
+            # -O qnU as a single argument (some net-snmp builds don't merge
+            # multiple -O flags reliably). q=quick (no '=' / type prefix),
+            # n=numeric OID (override any MIB loaded in snmp.conf), U=no
+            # units suffix on values.
+            "-OqnU",
+            # -m '' disables MIB loading entirely on this invocation — bullet-proofs
+            # the parser against /etc/snmp/snmp.conf having `mibs all` set.
+            "-m", "",
             "-t", str(self.timeout),
             "-r", str(self.retries),
         ]
@@ -248,12 +340,15 @@ class SnmpClient:
             chunk = oids[i:i + batch]
             cmd = ["snmpget", *self._common(), self.host, *chunk]
             rc, stdout, stderr = self._run(cmd)
-            if rc != 0:
-                # snmpget exits non-zero on any failure (camera down, auth bad,
-                # at least one OID returns noSuchObject). Try to salvage rows.
-                pass
-            for line in stdout.splitlines():
-                self._parse_line(line, out)
+            self.last_stderr = stderr.decode("utf-8", errors="replace").strip()
+            if self.debug:
+                print(f"# get cmd: {shlex.join(cmd)}", file=sys.stderr)
+                print(f"# get rc={rc} stdout={len(stdout)}B stderr={self.last_stderr!r}",
+                      file=sys.stderr)
+                if stdout:
+                    print(f"# get stdout (first 400B): {stdout[:400]!r}", file=sys.stderr)
+            text = stdout.decode("utf-8", errors="replace")
+            out.update(parse_snmp_text(text))
         return out
 
     def walk(self, root_oid: str) -> dict[str, str]:
@@ -265,40 +360,11 @@ class SnmpClient:
             print(f"# walk cmd: {shlex.join(cmd)}", file=sys.stderr)
             print(f"# walk rc={rc} stdout={len(stdout)}B stderr={self.last_stderr!r}",
                   file=sys.stderr)
+            if stdout:
+                print(f"# walk stdout (first 400B): {stdout[:400]!r}", file=sys.stderr)
         if rc != 0:
             return {}
-        out: dict[str, str] = {}
-        for line in stdout.splitlines():
-            self._parse_line(line, out)
-        return out
-
-    @staticmethod
-    def _parse_line(line: bytes | str, into: dict[str, str]) -> None:
-        # `snmpget -Oqn` produces lines like:
-        #   .1.3.6.1.4.1.3967.1.1.5.1.0 "FLEXIDOME indoor 5100i IR - 5MP"
-        # or, for integers / counters:
-        #   .1.3.6.1.4.1.3967.1.1.4.1.1.1.1 659211
-        # or, on missing rows:
-        #   .1.3.6.1.4.1.3967.1.99.99.0 = No Such Object available
-        if isinstance(line, bytes):
-            line = line.decode("utf-8", errors="replace")
-        line = line.strip()
-        if not line or line.startswith("End of MIB"):
-            return
-        # Drop the noSuchObject / noSuchInstance markers — they're absences
-        if "No Such" in line or "= No more" in line:
-            return
-        # Split into OID + value on the first whitespace run
-        m = re.match(r"^\.?(\S+)\s+(.*)$", line)
-        if not m:
-            return
-        oid, raw = m.group(1), m.group(2)
-        # If snmp returned a quoted string, unquote — net-snmp uses double-quotes
-        if len(raw) >= 2 and raw[0] == '"' and raw.endswith('"'):
-            raw = raw[1:-1]
-        # G29 — strip trailing binary garbage
-        clean = strip_g29(raw.encode("utf-8", errors="replace"))
-        into[oid] = clean
+        return parse_snmp_text(stdout.decode("utf-8", errors="replace"))
 
     @staticmethod
     def _run(cmd: list[str]) -> tuple[int, bytes, bytes]:
