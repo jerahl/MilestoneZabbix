@@ -271,7 +271,7 @@ class SnmpClient:
             hint = self._diagnose(err)
             fatal(
                 f"SNMP pre-flight failed against {self.host}\n"
-                f"  command : {shlex.join(cmd)}\n"
+                f"  command : {redact_cmd(cmd)}\n"
                 f"  stderr  : {err}\n"
                 f"  {hint}"
             )
@@ -342,7 +342,7 @@ class SnmpClient:
             rc, stdout, stderr = self._run(cmd)
             self.last_stderr = stderr.decode("utf-8", errors="replace").strip()
             if self.debug:
-                print(f"# get cmd: {shlex.join(cmd)}", file=sys.stderr)
+                print(f"# get cmd: {redact_cmd(cmd)}", file=sys.stderr)
                 print(f"# get rc={rc} stdout={len(stdout)}B stderr={self.last_stderr!r}",
                       file=sys.stderr)
                 if stdout:
@@ -357,7 +357,7 @@ class SnmpClient:
         rc, stdout, stderr = self._run(cmd)
         self.last_stderr = stderr.decode("utf-8", errors="replace").strip()
         if self.debug:
-            print(f"# walk cmd: {shlex.join(cmd)}", file=sys.stderr)
+            print(f"# walk cmd: {redact_cmd(cmd)}", file=sys.stderr)
             print(f"# walk rc={rc} stdout={len(stdout)}B stderr={self.last_stderr!r}",
                   file=sys.stderr)
             if stdout:
@@ -436,6 +436,64 @@ def now_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 
+def redact_cmd(cmd: list[str]) -> str:
+    """Render a command-line for printing, scrubbing SNMP credentials.
+
+    -c <community>, -A <auth-pass>, -X <priv-pass> get replaced with '***' so
+    that --debug output is safe to paste into a bug report.
+    """
+    REDACT_AFTER = {"-c", "-A", "-X"}
+    out: list[str] = []
+    skip_next = False
+    for tok in cmd:
+        if skip_next:
+            out.append("***")
+            skip_next = False
+            continue
+        out.append(tok)
+        if tok in REDACT_AFTER:
+            skip_next = True
+    return shlex.join(out)
+
+
+def render_diff(old: str, new: str, width: int = 30) -> tuple[str, str]:
+    """For long values where most of the bytes are shared, return ellipsised
+    forms that emphasise the *changing* portion of each side.
+
+    Bosch hex-blob OIDs (config digest, encoder slot, sensor tuple) all carry
+    their entropy in a small region of an otherwise-static blob — head
+    truncation would hide exactly the part the operator wants to see.
+    """
+    if old == new:
+        return old, new
+    if len(old) <= width and len(new) <= width:
+        return old, new
+    # Longest common prefix
+    lcp = 0
+    for a, b in zip(old, new):
+        if a == b:
+            lcp += 1
+        else:
+            break
+    # Longest common suffix (on what remains after the LCP, both sides)
+    o_rest, n_rest = old[lcp:], new[lcp:]
+    lcs = 0
+    for a, b in zip(reversed(o_rest), reversed(n_rest)):
+        if a == b:
+            lcs += 1
+        else:
+            break
+    # Display window: 4 chars of context before the divergence, and the full
+    # changing section, and 4 chars after (or however much suffix is shared).
+    ctx = 4
+    start = max(0, lcp - ctx)
+    o_end = len(old) - max(0, lcs - ctx)
+    n_end = len(new) - max(0, lcs - ctx)
+    o = ("…" if start > 0 else "") + old[start:o_end] + ("…" if o_end < len(old) else "")
+    n = ("…" if start > 0 else "") + new[start:n_end] + ("…" if n_end < len(new) else "")
+    return o, n
+
+
 def print_banner(identity: dict[str, str], imagers: list[tuple[int, str]],
                  watched: dict[str, str], args: argparse.Namespace) -> None:
     print(f"# bosch_motion_probe.py  ·  host={args.host}  ·  started {now_iso()}")
@@ -454,11 +512,12 @@ def print_banner(identity: dict[str, str], imagers: list[tuple[int, str]],
 
 
 def print_change(oid: str, old: str, new: str, label: str) -> None:
-    # Truncate long blobs for readability
-    def shorten(s: str, n: int = 40) -> str:
-        return s if len(s) <= n else s[:n - 1] + "…"
+    # Smart-diff display: for long blobs that share most of their bytes, show
+    # only the differing portion + a few chars of context. The naive head-cut
+    # would hide the digest tail bytes that actually moved.
+    o_disp, n_disp = render_diff(old, new, width=32)
     scope = "imager" if "imager" in label else "device"
-    print(f"  {now_iso():<27} {scope:<12} {oid:<38} {shorten(old, 28)!r:>30} → {shorten(new, 28)!r}")
+    print(f"  {now_iso():<27} {scope:<12} {oid:<38} {o_disp!r:>34} → {n_disp!r}")
     print(f"  {'':<27} {'':<12} └─ {label}")
 
 
