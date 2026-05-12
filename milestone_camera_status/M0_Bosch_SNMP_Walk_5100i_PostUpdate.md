@@ -93,20 +93,20 @@ Use it as: `bosch.dev.board.fingerprint[{#HOST.NAME}]` — once-poll, never-chan
 
 Firmware short codes are not lexicographically/numerically ordered. **Don't put a numeric comparison on this field**. Surface as informational, and let operators interpret current vs target FW per-model.
 
-### `.3967.1.1.12.0` trailing 4 bytes — config-checksum confirmed, NOT a timestamp
+### `.3967.1.1.12.0` trailing 4 bytes — **per-second tick counter** (corrected; NOT a config digest)
 
-| Walk | Trailing 4 bytes |
-|---|---|
-| 5100i old FW | `319441D5` |
-| 5100i new FW | **`319448BB`** (delta: 7,398 — small) |
-| 7000i | `3194546A` (similar magnitude) |
+| Walk | Trailing 4 bytes | Notes |
+|---|---|---|
+| 5100i old FW | `319441D5` | snapshot value |
+| 5100i new FW | **`319448BB`** (delta: 7,398) | the "delta" is just seconds elapsed between walks |
+| 7000i | `3194546A` | snapshot value on a different box |
+| 5100i live watch (2026-05-12 16:24) | `…BC55 → BC56 → BC57 → BC59 → BC5A → BC5B → BC5C → BC5D → BC5E → BC5F → BC60` over 12 s | **+1 per second, monotonic** — proves it's a clock |
 
-Three observations clinch it:
-1. All three walks land in the `0x3194…` range despite being different boxes and different days — not a Unix epoch.
-2. After a *firmware update* on the same box, the value moved only ~7,400 from the old value — looks like a digest of a slowly-changing config blob.
-3. The 7000i value is in the same range — not coincidence if it's a content hash of a similarly-structured config.
+The live watch settles the question. The original "small delta across firmware update" observation looked like a digest but was actually `~7,400 seconds = ~2 hours` of elapsed time between the two walks: the trailing 4 bytes are a uint32 **per-second tick counter**.
 
-**Final classification:** `bosch.dev.config.digest[…]` — `change()` triggers a "config drifted" alert; no semantic decoding.
+**Corrected classification:** `bosch.dev.tick.counter[…]` — could be useful as an alive-heartbeat (if it ever stops incrementing, the camera's internal scheduler is stuck) but **noise during motion testing** and useless as a config-drift detector. The `bosch_motion_probe.py` tool suppresses it from the default change stream via `NOISY_OIDS`.
+
+The unanswered question is what zero of the counter is. Across the four snapshots the value spans `0x31944100 → 0x319448BB → 0x319454BC → 0x31948FFF` — a range of `0xE000 ≈ 57 000 seconds ≈ 16 hours`, consistent with a counter that resets on some periodic event (NTP resync? firmware service restart? day rollover?). Probe in a follow-up — reboot the camera and watch whether `.1.1.12.0` resets to a value near zero or just continues incrementing.
 
 ### `.3967.1.1.5.13.0` — encodes the camera's IP-last-3-octets (decoded)
 
@@ -127,15 +127,43 @@ Useful sanity-check item but not a primary monitoring surface (IP is already in 
 
 The 5100i counter increased by 30 across a firmware update that **rebooted the camera** — so the counter is **persisted across reboots and survives firmware flash** (stored in the `/data` partition). The semantic is unclear without the MIB, but the increment rate is small enough that this is some "per-day operating hours" or "shutter actuation × scale" type metric. Worth surfacing for change-tracking even without a precise label.
 
-### Scalars whose semantics moved on the same box (`.3967.1.1.7.1.1.1`, `.3967.1.1.9.1.1.1`, `.3967.1.1.9.1.4.1`)
+### Scalars whose semantics moved on the same box — **auto-exposure correlated triple** (decoded via live watch)
 
-| OID | Old FW | New FW | 7000i |
+| OID | Old FW | New FW | 7000i | Live watch | Decoded role |
+|---|---|---|---|---|---|
+| `.3967.1.1.7.1.1.1` | 620 | 600 | 385 | `590 → 600` (single +10 step) | slow-step scalar — colour-temp ×10 K? sensor-temp? |
+| `.3967.1.1.9.1.1.1` | 39 | 45 | 17 | `51 → 43 → 42 → 43` (~1-2 Hz) | **auto-exposure integer** |
+| `.3967.1.1.9.1.4.1` | `27062A00` | `2D012300` | `16000000` | `33 01 23 00 → 2B 01 24 00 → 2A 01 25 00 → 2B 01 25 00` | **auto-exposure 4-tuple** |
+
+The live watch on a static scene shows `.9.1.1.1` and `.9.1.4.1` moving in lock-step at ~1 Hz with byte 0 of the 4-tuple **always equal** to the integer scalar (`51 = 0x33`, `43 = 0x2B`, `42 = 0x2A`). That's the smoking-gun signal these are the imager's auto-exposure loop:
+- `.9.1.4.1` byte 0 = iris (= `.9.1.1.1`)
+- `.9.1.4.1` byte 1 = static (=`01`)
+- `.9.1.4.1` byte 2 = shutter or gain (varies)
+- `.9.1.4.1` byte 3 = static (=`00`)
+
+**Classification:** `bosch.imager.exposure.*` — useful as a "sensor is alive and adapting" diagnostic, but **noise during motion testing** and unsuitable for triggers (always changing). `bosch_motion_probe.py` suppresses these too.
+
+### `.3967.1.2.2.1.1.X` (encoder slot blob) — decoded via live watch
+
+Live watch on the 5100i-5MP captured a bitrate change on the primary encoder stream: `bytes 4-7` of slot 1 jumped from `00 00 02 EF` (= 751 kbps) to `00 00 03 42` (= 834 kbps) during an idle observation. Combined with the rest of the blob's static fields, the 44-byte layout decodes as:
+
+| Bytes | Field | Pilot 5100i-5MP value | Meaning |
 |---|---|---|---|
-| `.3967.1.1.7.1.1.1` | 620 | 600 | 385 |
-| `.3967.1.1.9.1.1.1` | 39 | 45 | 17 |
-| `.3967.1.1.9.1.4.1` | `27062A00` | `2D012300` | `16000000` |
+| 0–3 | `00 00 01 2C` | 300 | GOP × something (looks like 30 fps × 10) |
+| 4–7 | `00 00 02 EF` → `00 00 03 42` | **751 kbps → 834 kbps** | **current bitrate (kbps)** — this is the byte that moved |
+| 8–11 | `00 00 07 13` | 1811 | avg / target bitrate? |
+| 12–15 | `00 00 07 13` | 1811 | peak bitrate? |
+| 16–19 | `00 00 00 00` | 0 | — |
+| 20–23 | `20 0A 00 00` | **2592** | **width**  ← matches "5MP" model |
+| 24–27 | `98 07 00 00` | **1944** | **height** (2592 × 1944 = 5,038,848 px ≈ 5 MP ✓) |
+| 28–31 | `04 00 00 00` | 4 | codec (H.264 = 4?) |
+| 32–35 | `FF 00 00 00` | — | — |
+| 36–39 | `00 00 00 00` | — | — |
+| 40–43 | `01 00 00 00` | 1 | enabled flag |
 
-The 5100i scalars **changed within 12 minutes** of the FW update (between two walks of the same physical camera) — meaning these are **measured / dynamic** quantities, not configuration. The values are too small for bitrate / framerate / total counters; **best guess: sensor / IR-illuminator runtime parameters** (intensity, current, ambient-light reading). Surface as `bosch.cam.sensor.scalar1/2/3` with change detection, but don't attach triggers until the MIB labels them.
+That's a **per-second snapshot of the encoder's working state**, including the live bitrate. Worth surfacing as `bosch.imager.encoder.bitrate.kbps[{#IMAGER.IDX}]` in the Zabbix sub-template — drop-to-zero is a real "encoder stalled" signal, sustained-low is a "static scene" signal that can correlate with motion-detection.
+
+The 8 encoder slots per imager probably correspond to Bosch's 8 stream profiles (primary stream, secondary stream, snapshot, ROI, …); slots beyond the configured count fill with `FF FF FF FF` sentinels in the bitrate bytes — that pattern is visible in our walk dumps.
 
 ## 6 · Standard-MIB data points on the new firmware
 

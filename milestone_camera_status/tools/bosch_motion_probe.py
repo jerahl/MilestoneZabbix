@@ -79,6 +79,18 @@ from typing import Any
 # ─────────────────────────────────────────────────────────────────────────────
 BOSCH = "1.3.6.1.4.1.3967"
 
+# OIDs whose value moves every poll on an idle, undisturbed camera. Suppressed
+# from the change-print stream by default (--ignore-noise, on by default) so
+# real motion / alarm signals stand out. The classifications come from the
+# pilot 5100i live watch sessions in May 2026 — see
+# M0_Bosch_SNMP_Walk_5100i_PostUpdate.md §5 for the per-OID evidence.
+NOISY_OIDS = {
+    f"{BOSCH}.1.1.12.0":         "tick counter (+1 per second; not a config digest)",
+    f"{BOSCH}.1.1.7.1.1.1":      "sensor scalar A (slow drift — colour-temp / sensor-temp)",
+    f"{BOSCH}.1.1.9.1.1.1":      "auto-exposure scalar (byte 0 of .9.1.4.1)",
+    f"{BOSCH}.1.1.9.1.4.1":      "auto-exposure tuple (iris/?/shutter/?)",
+}
+
 # Per-imager — one row per logical imager (1 on a 5100i, 4 on a 7000i multi)
 PER_IMAGER_TEMPLATES: dict[str, str] = {
     f"{BOSCH}.1.1.4.1.1.1.{{idx}}":   "per-imager counter #1 (firmware-internal, near-static)",
@@ -86,7 +98,7 @@ PER_IMAGER_TEMPLATES: dict[str, str] = {
     f"{BOSCH}.1.3.1.1.1.{{idx}}":     "per-imager alarm state #1",
     f"{BOSCH}.1.3.2.1.1.{{idx}}":     "per-imager alarm state #2",
     f"{BOSCH}.1.3.3.1.1.{{idx}}":     "per-imager alarm state #3 (5-byte bitmap)",
-    f"{BOSCH}.1.2.2.1.1.{{slot}}":    "encoder slot blob (8 per imager, idx (i-1)*8+1 .. i*8)",
+    f"{BOSCH}.1.2.2.1.1.{{slot}}":    "encoder slot blob (bytes 4-7=current bitrate kbps, 20-27=WxH, 28=codec)",
 }
 
 # Per-device — fixed regardless of imager count
@@ -97,13 +109,13 @@ PER_DEVICE_OIDS: dict[str, str] = {
     # Two device-wide counters
     f"{BOSCH}.1.4.1.1.1.1.1":      "device counter #1 (IVA / analytics device-wide)",
     f"{BOSCH}.1.4.2.1.1.1.1":      "device counter #2 (IVA / analytics device-wide)",
-    # Dynamic-ish scalars whose semantics are still unlabelled
-    f"{BOSCH}.1.1.7.1.1.1":        "sensor scalar A (varies in 10s; candidate ambient / temp)",
-    f"{BOSCH}.1.1.9.1.1.1":        "sensor scalar B (varies slowly; candidate IR intensity)",
-    f"{BOSCH}.1.1.9.1.4.1":        "sensor scalar C (4-byte blob; candidate IR state)",
+    # Dynamic-ish scalars whose semantics are now partially understood
+    f"{BOSCH}.1.1.7.1.1.1":        NOISY_OIDS[f"{BOSCH}.1.1.7.1.1.1"],
+    f"{BOSCH}.1.1.9.1.1.1":        NOISY_OIDS[f"{BOSCH}.1.1.9.1.1.1"],
+    f"{BOSCH}.1.1.9.1.4.1":        NOISY_OIDS[f"{BOSCH}.1.1.9.1.4.1"],
     f"{BOSCH}.1.1.10.0":           "scalar (often static at 130 — could be config preset)",
-    # Config digest — moves only on config change
-    f"{BOSCH}.1.1.12.0":           "device config digest (16 bytes; trailing 4 = checksum)",
+    # Per-second tick counter — moves every poll on an idle camera
+    f"{BOSCH}.1.1.12.0":           NOISY_OIDS[f"{BOSCH}.1.1.12.0"],
     # State blobs in .1.1.5 — slow-moving but useful change detectors
     f"{BOSCH}.1.1.5.12.0":         "persistent counter (survives reboot; candidate operating-hours)",
     f"{BOSCH}.1.1.5.13.0":         "encoded state #1 (contains IP-last-3-octets)",
@@ -531,8 +543,19 @@ def cmd_watch(snmp: SnmpClient, args: argparse.Namespace) -> int:
     watched = build_watch_oids(imagers)
     print_banner(identity, imagers, watched, args)
 
+    # Build the noise filter — OIDs whose value moves every poll on an idle
+    # camera (tick counter, auto-exposure tuple, slow sensor drift). Hidden by
+    # default so the alarm matrix and counter signals stand out during motion
+    # testing. --include-noise reverses for full-fidelity diff streams.
+    suppress: set[str] = set() if args.include_noise else set(NOISY_OIDS.keys())
+    if suppress:
+        print(f"#   noise filter    : suppressing {len(suppress)} always-changing OIDs "
+              f"({', '.join(sorted(suppress))}). Override with --include-noise.")
+    print()
+
     oids = list(watched.keys())
     last: dict[str, str] = snmp.get_many(oids)
+    suppressed_counts: dict[str, int] = {oid: 0 for oid in suppress}
 
     # Optional periodic snapshot
     next_snapshot_at = time.monotonic() + args.snapshot_every if args.snapshot_every else None
@@ -550,6 +573,9 @@ def cmd_watch(snmp: SnmpClient, args: argparse.Namespace) -> int:
             old = last.get(oid)
             new = current.get(oid)
             if old != new and new is not None:
+                if oid in suppress:
+                    suppressed_counts[oid] = suppressed_counts.get(oid, 0) + 1
+                    continue
                 print_change(oid, str(old), str(new), watched[oid])
         if current:
             last = current
@@ -559,6 +585,14 @@ def cmd_watch(snmp: SnmpClient, args: argparse.Namespace) -> int:
             print(f"# snapshot written: {path}", flush=True)
             next_snapshot_at = time.monotonic() + args.snapshot_every
 
+    # On exit, summarise how many noise-changes were filtered so the operator
+    # sees that the suppression was working and the camera was being polled.
+    if suppress and any(suppressed_counts.values()):
+        print(f"# noise summary:", flush=True)
+        for oid, n in sorted(suppressed_counts.items()):
+            if n:
+                print(f"#   {oid}  {n} change(s) suppressed   ({NOISY_OIDS.get(oid, '')})",
+                      flush=True)
     print(f"# stopped at {now_iso()}", flush=True)
     return 0
 
@@ -655,6 +689,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     # Watch tuning
     p.add_argument("--interval", type=float, default=1.0,
                    help="poll interval in seconds (default 1.0; 0.25 for fast motion testing)")
+    p.add_argument("--include-noise", action="store_true",
+                   help="don't suppress always-changing OIDs (tick counter, auto-exposure, "
+                        "sensor drift). Off by default so motion-test signals stand out.")
 
     # Diff mode (alternative to host-based modes)
     p.add_argument("--diff", nargs=2, metavar=("BEFORE", "AFTER"), default=None,
