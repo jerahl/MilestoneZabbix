@@ -94,10 +94,10 @@ NOISY_OIDS = {
 # Per-imager — one row per logical imager (1 on a 5100i, 4 on a 7000i multi)
 PER_IMAGER_TEMPLATES: dict[str, str] = {
     f"{BOSCH}.1.1.4.1.1.1.{{idx}}":   "per-imager counter #1 (firmware-internal, near-static)",
-    f"{BOSCH}.1.1.4.1.1.2.{{idx}}":   "per-imager counter #2 (zeroed at rest, candidate motion-trip lifetime)",
-    f"{BOSCH}.1.3.1.1.1.{{idx}}":     "per-imager alarm state #1",
-    f"{BOSCH}.1.3.2.1.1.{{idx}}":     "per-imager alarm state #2",
-    f"{BOSCH}.1.3.3.1.1.{{idx}}":     "per-imager alarm state #3 (5-byte bitmap)",
+    f"{BOSCH}.1.1.4.1.1.2.{{idx}}":   "per-imager motion-trip indicator (0 idle / 1 with active VCA — possibly lifetime counter, TBD)",
+    f"{BOSCH}.1.3.1.1.1.{{idx}}":     "per-imager alarm state #1 (reserved — not toggled by VCA motion; candidate input-contact / tamper)",
+    f"{BOSCH}.1.3.2.1.1.{{idx}}":     "per-imager VCA motion-active boolean (0 idle / 1 alarm)",
+    f"{BOSCH}.1.3.3.1.1.{{idx}}":     "per-imager alarm-detail bitmap (5 bytes: [0]=flags, [3]=alarm-type, [4]=rule-index)",
     f"{BOSCH}.1.2.2.1.1.{{slot}}":    "encoder slot blob (bytes 4-7=current bitrate kbps, 20-27=WxH, 28=codec)",
 }
 
@@ -556,6 +556,27 @@ def cmd_watch(snmp: SnmpClient, args: argparse.Namespace) -> int:
     oids = list(watched.keys())
     last: dict[str, str] = snmp.get_many(oids)
     suppressed_counts: dict[str, int] = {oid: 0 for oid in suppress}
+
+    # Print the initial state for any non-suppressed OID that's already at a
+    # non-default value. Catches the "motion was active when the watcher
+    # started" case — without this, the operator would never see the alarm
+    # OIDs because subsequent polls return the same (non-zero) value, so the
+    # diff stream stays silent.
+    DEFAULT_VALUES = {"0", "", "00 00 00 00 00", "0.0", "0.0.0.0"}
+    nonzero_at_start = sorted(
+        (oid for oid, v in last.items()
+         if oid not in suppress and v not in DEFAULT_VALUES and oid in watched),
+        key=lambda o: watched[o],
+    )
+    if nonzero_at_start:
+        print(f"#   initial non-default values (alarm OIDs may already be active):")
+        for oid in nonzero_at_start:
+            v = last[oid]
+            v_disp = v if len(v) <= 50 else v[:47] + "…"
+            print(f"#     {oid:<40} {v_disp!r}   {watched[oid]}")
+        print(f"#   ↳ to see transitions to/from these values, wait for the camera state "
+              f"to settle to defaults before triggering test events.")
+        print()
 
     # Optional periodic snapshot
     next_snapshot_at = time.monotonic() + args.snapshot_every if args.snapshot_every else None
