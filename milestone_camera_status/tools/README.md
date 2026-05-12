@@ -64,7 +64,17 @@ in `PER_IMAGER_TEMPLATES` and `PER_DEVICE_OIDS`.
 
 ### Suggested test plan (M0 pilot validation)
 
-1. Run `--once --snapshot rest.json` against a camera with the scene static.
+**Prerequisite — enable VCA in the camera UI first.** The Bosch private MIB's
+alarm matrices (`.3967.1.3.*`) only flip when a configured Video Content
+Analysis (VCA) rule actually trips. The 5100i ships with Essential Video
+Analytics (EVA) included but **default-off**. In the Bosch browser UI:
+**Configuration → Alarm → VCA**, enable an analytics mode (EVA / IVA / Motion+),
+and add a rule that covers the whole frame so any movement trips it. Without
+this step the alarm matrices stay at `0` forever and the watcher will
+correctly report "no alarm signals" no matter how much motion is in the FoV.
+
+1. Run `--once --snapshot rest.json` against a camera with the scene static
+   and the EVA rule enabled but un-tripped.
 2. Walk in front of the camera (cover ~50 % of the frame for ~3 s).
 3. While motion is happening, watch the live diff output; record which
    imager-level OIDs (`.3967.1.3.{1,2,3}.1.1.X`) and which device-level
@@ -80,10 +90,21 @@ in `PER_IMAGER_TEMPLATES` and `PER_DEVICE_OIDS`.
    relay-output state slot should be visible in the same device-wide
    matrix.
 7. Save a snapshot before and after a known config change (rename the
-   camera in the browser UI). The `.3967.1.1.12.0` config digest's
-   trailing 4 bytes should shift; nothing else.
+   camera in the browser UI). The `.3967.1.1.12.0` field is a per-second
+   tick counter (NOT a config digest); look at `.3967.1.1.5.{13,14}` for
+   any config-related changes.
 
 Append findings to `M0_Bosch_SNMP_Walk_Analysis.md` §3 (alarms subtree).
+
+### Tip: encoder slot 1 (`.3967.1.2.2.1.1.1`) shows live bitrate
+
+Bytes 4–7 of the slot blob carry the imager's current encoded bitrate in
+kbps. On a static scene it sits around 700–800 kbps; on an active scene
+(real motion, ambient lighting changes) it climbs to 5–6 Mbps. Watching
+this alone is a cheap "scene activity" signal even when no alarm rule is
+configured — useful for confirming the camera is actually seeing
+something during a probe session. Bytes 0–3 of the same slot are a
+per-second counter that drifts +1/s independent of scene content.
 
 ### Troubleshooting
 

@@ -149,7 +149,7 @@ Live watch on the 5100i-5MP captured a bitrate change on the primary encoder str
 
 | Bytes | Field | Pilot 5100i-5MP value | Meaning |
 |---|---|---|---|
-| 0–3 | `00 00 01 2C` | 300 | GOP × something (looks like 30 fps × 10) |
+| 0–3 | `00 00 01 2C` → `00 00 01 2B` → `00 00 01 2C` (live) | 300 / 299 / 300 | **+1 per second, clock-like counter** (initial "GOP × fps" hypothesis was wrong — bytes move every second on the same encoder, same as the device-wide `.1.1.12.0` tick counter) |
 | 4–7 | `00 00 02 EF` → `00 00 03 42` | **751 kbps → 834 kbps** | **current bitrate (kbps)** — this is the byte that moved |
 | 8–11 | `00 00 07 13` | 1811 | avg / target bitrate? |
 | 12–15 | `00 00 07 13` | 1811 | peak bitrate? |
