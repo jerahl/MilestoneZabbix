@@ -106,6 +106,84 @@ configured — useful for confirming the camera is actually seeing
 something during a probe session. Bytes 0–3 of the same slot are a
 per-second counter that drifts +1/s independent of scene content.
 
+---
+
+## `bosch_fleet_compat.py`
+
+Fleet-shape probe: given a list of camera IPs, GETs eight schema-defining
+OIDs per camera in one round trip and classifies the result. Used during
+M0 closeout to confirm whether the SNMP schema decoded from the 5100i +
+7000i pilots (per `M0_Bosch_Findings.md`) holds across older Bosch model
+families in the fleet — see `M0_Bosch_Fleet_Compatibility.md` for the
+full probe campaign rationale.
+
+### What it returns
+
+A one-line-per-camera markdown row, classified into:
+
+- **A** — full compatibility. Alarm and encoder OIDs return the expected
+  shapes (integer-valued alarm boolean + ≥20-byte hex encoder blob). The
+  sub-template's full item list applies to this generation of camera.
+- **B** — identity-only. Bosch private identity branch present, but the
+  alarm/encoder OIDs are absent or wrong-shaped. Sub-template auto-gates
+  its full-MIB items off for this generation.
+- **C** — minimal. Only standard MIB-II is present; no `.1.3.6.1.4.1.3967`
+  branch. Sub-template emits only standard-MIB items.
+- **X** — unreachable. SNMP error printed in the row.
+
+### Usage
+
+```sh
+# IPs as args
+./bosch_fleet_compat.py 10.24.18.83 10.24.18.84 10.24.18.85
+
+# From a file (one IP per line, '#' comments allowed)
+cat > pilot_targets.txt <<EOF
+# CPP7.3 pilots (already-validated reference)
+10.24.18.83        # FLEXIDOME indoor 5100i IR - 5MP
+10.112.18.48       # FLEXIDOME multi 7000i IR
+# 'i'-generation probe targets (high impact — 1,488 cameras in this group)
+10.24.18.84        # FLEXIDOME IP 5000i IR
+10.24.18.85        # FLEXIDOME IP 4000i
+10.24.18.86        # FLEXIDOME IP micro 3000i
+# Pre-'i' 5000 HD generation probe targets (442 cameras)
+10.24.18.87        # FLEXIDOME IP indoor 5000 HD
+10.24.18.88        # FLEXIDOME IP outdoor 5000 HD
+10.24.18.89        # DINION IP starlight 6000 HD
+10.24.18.90        # FLEXIDOME IP panoramic 5000 MP
+10.24.18.91        # BOSCH FLEXIDOME HD 720p VR IVA
+EOF
+./bosch_fleet_compat.py --hosts-file pilot_targets.txt
+```
+
+For SNMPv3 the same flags as `bosch_motion_probe.py` apply
+(`--version 3 --v3-user ...` etc.).
+
+### Workflow
+
+1. Pick one camera per row in `M0_Bosch_Fleet_Compatibility.md` §5 (about
+   11 cameras spanning every distinct platform generation in the fleet).
+2. Run `./bosch_fleet_compat.py --hosts-file <list> > probe_results.md`.
+3. Paste the output as §9 of `M0_Bosch_Fleet_Compatibility.md`.
+4. For each generation, set the bucket (A/B/C) — that's the sub-template
+   gating outcome.
+5. M1 ships `Milestone Camera vendor — Bosch.yaml` with the bucket logic
+   baked into its calc items (the `bosch.dev.has_full_mib` flag — see
+   `M0_Bosch_Fleet_Compatibility.md` §6).
+
+### Performance + safety
+
+- Probes in parallel via a thread pool (default 8 workers; tune with
+  `--workers`). 11 cameras complete in ~3 seconds; a hundred in ~30
+  seconds.
+- Each probe is a single batched `snmpget` of 8 OIDs — minimal load on
+  the cameras.
+- Credentials redacted from `--debug`-style printing (same redactor as
+  `bosch_motion_probe.py`); the tool doesn't print the snmp command line
+  in non-debug runs.
+- Exits non-zero if any camera lands in bucket X — useful for shell
+  pipelines that want to gate on full fleet reachability.
+
 ### Troubleshooting
 
 The script runs a **pre-flight** before doing anything Bosch-specific: it
