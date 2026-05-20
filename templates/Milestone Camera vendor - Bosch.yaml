@@ -344,7 +344,7 @@ zabbix_export:
             evaltype: AND
             conditions:
               - macro: '{#FSNAME}'
-                value: '^/'
+                value: '^(/data|/var/log)$'
                 operator: MATCHES_REGEX
                 formulaid: A
           preprocessing:
@@ -377,10 +377,15 @@ zabbix_export:
                   value: zbx
               trigger_prototypes:
                 - uuid: a2730606267648eb87f4bae87c8449af
-                  expression: 'last(//bosch.cam.fs.used.pct[{#FSNAME}])>90 and ({#FSNAME}="/data" or {#FSNAME}="/var/log")'
+                  expression: 'last(//bosch.cam.fs.used.pct[{#FSNAME}])>90'
                   name: 'Cam [{HOST.NAME}]: FS {#FSNAME} >90% used'
                   priority: AVERAGE
-                  description: 'Only triggers on the persistent /data and /var/log mounts; tmpfs mounts (/run/*, /tmp, etc.) auto-cap and are not alerting.'
+                  description: |
+                    Path filter (only /data and /var/log) moved up to the
+                    LLD itself — the trigger fires on any discovered FS at
+                    >90%. Zabbix doesn't allow string-literal LLD-macro
+                    comparison in trigger expressions, so this is the
+                    correct factoring.
             - uuid: f5cae53300494dbdadb95ced7eaa2c69
               name: 'Cam FS [{#FSNAME}]: total (alloc units)'
               type: SNMP_AGENT
