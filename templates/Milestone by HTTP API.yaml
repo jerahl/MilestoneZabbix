@@ -402,7 +402,7 @@ zabbix_export:
               params: |
                 (last(//milestone.cam.enabled[{#CAM.ID}])="false")*-1
                 + (last(//milestone.cam.enabled[{#CAM.ID}])="true")*(
-                    (max(last_foreach(/*/icmpping?[tag="cam_id" and value="{#CAM.ID}"]))=0)*2
+                    (max(last_foreach(/*/icmpping?[tag="cam_id:{#CAM.ID}"]))=0)*2
                     + (length(last(//milestone.cam.ess.comm.type[{#CAM.ID}]))>0
                        and last(//milestone.cam.ess.comm.type[{#CAM.ID}])<>"{$MILESTONE.ESS.TYPE.COMMUNICATION_OK}")*1
                   )
@@ -733,7 +733,7 @@ zabbix_export:
               params: |
                 (last(//milestone.cam.enabled[{#CAM.ID}])="false")*-1
                 + (last(//milestone.cam.enabled[{#CAM.ID}])="true")*(
-                    (max(last_foreach(/*/icmpping?[tag="cam_id" and value="{#CAM.ID}"]))=0)*2
+                    (max(last_foreach(/*/icmpping?[tag="cam_id:{#CAM.ID}"]))=0)*2
                     + (length(last(//milestone.cam.ess.comm.type[{#CAM.ID}]))>0
                        and last(//milestone.cam.ess.comm.type[{#CAM.ID}])<>"{$MILESTONE.ESS.TYPE.COMMUNICATION_OK}")*1
                   )
