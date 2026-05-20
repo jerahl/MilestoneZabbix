@@ -792,7 +792,7 @@ zabbix_export:
               templates:
                 - name: 'Milestone Camera by Direct Polling'
               interfaces:
-                - type: AGENT
+                - type: ZBX_AGENT
                   useip: 'YES'
                   ip: '{#CAM.HW.IP}'
                   dns: ''
