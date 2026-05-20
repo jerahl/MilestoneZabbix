@@ -81,7 +81,7 @@ zabbix_export:
               value: zbx
           triggers:
             - uuid: 1aaf373fff6743ab89d60b1c956e556b
-              expression: 'max(/Milestone Camera by Direct Polling/icmpping,#3)=0'
+              expression: 'max(//icmpping,#3)=0'
               name: 'Cam [{HOST.NAME}]: ICMP unreachable (3 consecutive)'
               priority: INFO
               description: |

@@ -205,8 +205,8 @@ zabbix_export:
           value_type: UNSIGNED
           delay: '{$MS.CAM.BOSCH.POLL.INTERVAL}'
           params: |
-            (length(last(/Milestone Camera vendor - Bosch/bosch.dev.vendor))>0)
-            * (length(last(/Milestone Camera vendor - Bosch/bosch.dev.model))>0)
+            (length(last(//bosch.dev.vendor))>0)
+            * (length(last(//bosch.dev.model))>0)
           description: |
             Bucket A/B/C gate. 1 = full Bosch private MIB present (alarm
             and encoder items will populate), 0 = identity-only or
@@ -247,7 +247,7 @@ zabbix_export:
               value: zbx
           triggers:
             - uuid: 93d056407c3c42e2b4ca31118ea14502
-              expression: 'last(/Milestone Camera vendor - Bosch/bosch.cam.uptime)<10m'
+              expression: 'last(//bosch.cam.uptime)<10m'
               name: 'Cam [{HOST.NAME}]: rebooted (uptime <10m)'
               priority: INFO
               description: 'Camera kernel uptime less than 10 minutes - it rebooted recently.'
@@ -268,7 +268,7 @@ zabbix_export:
               value: zbx
           triggers:
             - uuid: cc541fa5f67e4e8e822e3b5ed1cde3b7
-              expression: 'last(/Milestone Camera vendor - Bosch/bosch.cam.process.count)<80 and last(/Milestone Camera vendor - Bosch/bosch.cam.uptime)>10m'
+              expression: 'last(//bosch.cam.process.count)<80 and last(//bosch.cam.uptime)>10m'
               name: 'Cam [{HOST.NAME}]: process count low ({ITEM.VALUE})'
               priority: AVERAGE
               description: 'Process count below baseline - camera may be partly booted or services missing. Suppressed for 10m post-boot.'
@@ -279,7 +279,7 @@ zabbix_export:
           value_type: FLOAT
           delay: '{$MS.CAM.BOSCH.POLL.INTERVAL}'
           units: '%'
-          params: 'avg(last_foreach(/Milestone Camera vendor - Bosch/bosch.cam.cpu.core.pct[*]))'
+          params: 'avg(last_foreach(//bosch.cam.cpu.core.pct[*]))'
           description: |
             Average across all per-core CPU% items. Replaces UCD-MIB load
             average (laTable.1.3.6.1.4.1.2021.10) which was removed from
@@ -292,7 +292,7 @@ zabbix_export:
               value: zbx
           triggers:
             - uuid: 138e016196c44b028771a1a804313283
-              expression: 'avg(/Milestone Camera vendor - Bosch/bosch.cam.cpu.avg.pct,15m)>90'
+              expression: 'avg(//bosch.cam.cpu.avg.pct,15m)>90'
               name: 'Cam [{HOST.NAME}]: CPU sustained >90% for 15m'
               priority: WARNING
 
@@ -367,7 +367,7 @@ zabbix_export:
               value_type: FLOAT
               delay: '{$MS.CAM.BOSCH.POLL.INTERVAL}'
               units: '%'
-              params: 'last(/Milestone Camera vendor - Bosch/bosch.cam.fs.used.units[{#FSNAME}])*100/last(/Milestone Camera vendor - Bosch/bosch.cam.fs.total.units[{#FSNAME}])'
+              params: 'last(//bosch.cam.fs.used.units[{#FSNAME}])*100/last(//bosch.cam.fs.total.units[{#FSNAME}])'
               tags:
                 - tag: component
                   value: bosch-fs
@@ -377,7 +377,7 @@ zabbix_export:
                   value: zbx
               trigger_prototypes:
                 - uuid: a2730606267648eb87f4bae87c8449af
-                  expression: 'last(/Milestone Camera vendor - Bosch/bosch.cam.fs.used.pct[{#FSNAME}])>90 and ({#FSNAME}="/data" or {#FSNAME}="/var/log")'
+                  expression: 'last(//bosch.cam.fs.used.pct[{#FSNAME}])>90 and ({#FSNAME}="/data" or {#FSNAME}="/var/log")'
                   name: 'Cam [{HOST.NAME}]: FS {#FSNAME} >90% used'
                   priority: AVERAGE
                   description: 'Only triggers on the persistent /data and /var/log mounts; tmpfs mounts (/run/*, /tmp, etc.) auto-cap and are not alerting.'
@@ -460,7 +460,7 @@ zabbix_export:
                   value: zbx
               trigger_prototypes:
                 - uuid: e4e305e6986a4def890b2718faa09e9f
-                  expression: 'last(/Milestone Camera vendor - Bosch/bosch.cam.if.oper.status[{#IFNAME}])=2'
+                  expression: 'last(//bosch.cam.if.oper.status[{#IFNAME}])=2'
                   name: 'Cam [{HOST.NAME}]: interface {#IFNAME} down'
                   priority: WARNING
             - uuid: 6df93e73375f4b72a9c5609a87002bfa
@@ -659,7 +659,7 @@ zabbix_export:
                   value: zbx
               trigger_prototypes:
                 - uuid: 274870a275c14e5aac8727fe0264c4ec
-                  expression: 'avg(/Milestone Camera vendor - Bosch/bosch.imager.encoder.bitrate.kbps[{#IMAGER.IDX}],15m)<100 and last(/Milestone Camera vendor - Bosch/bosch.dev.has_full_mib)=1'
+                  expression: 'avg(//bosch.imager.encoder.bitrate.kbps[{#IMAGER.IDX}],15m)<100 and last(//bosch.dev.has_full_mib)=1'
                   name: 'Imager {#IMAGER.IDX} on [{HOST.NAME}]: encoder bitrate <100 kbps for 15m (may be stalled or scene fully static)'
                   priority: INFO
                   description: |
