@@ -365,46 +365,12 @@ zabbix_export:
                 operator: NOT_MATCHES_REGEX
           lifetime: 1d
           item_prototypes:
-            - uuid: a7a86292dbf74edf87208a02c33530ce
-              name: 'Cam [{#CAM.NAME}]: ICMP packet loss'
-              type: SIMPLE
-              key: 'icmppingloss[{#CAM.ADDRESS}]'
-              delay: '{$MILESTONE.CAM.PING.INTERVAL}'
-              units: '%'
-              description: 'ICMP packet loss percentage to this camera.'
-              tags:
-                - tag: camera
-                  value: '{#CAM.NAME}'
-                - tag: component
-                  value: camera-ping
-            - uuid: 608056a772a3402a93fef761d0aa1a96
-              name: 'Cam [{#CAM.NAME}]: ICMP round-trip avg'
-              type: SIMPLE
-              key: 'icmppingsec[{#CAM.ADDRESS}]'
-              delay: '{$MILESTONE.CAM.PING.INTERVAL}'
-              value_type: FLOAT
-              units: s
-              description: 'Average ICMP round-trip time to this camera.'
-              tags:
-                - tag: camera
-                  value: '{#CAM.NAME}'
-                - tag: component
-                  value: camera-ping
-            - uuid: 5ec1311cc0544ad7a6516a4634b298ae
-              name: 'Cam [{#CAM.NAME}]: ICMP ping'
-              type: SIMPLE
-              key: 'icmpping[{#CAM.ADDRESS}]'
-              delay: '{$MILESTONE.CAM.PING.INTERVAL}'
-              description: |
-                Basic ICMP reachability check sent directly to the camera's
-                network address as reported by the Milestone REST API.
-              valuemap:
-                name: 'Service state'
-              tags:
-                - tag: camera
-                  value: '{#CAM.NAME}'
-                - tag: component
-                  value: camera-ping
+            # ICMP item prototypes MOVED to the per-camera host template
+            # 'Milestone Camera by Direct Polling' (per Plan v1.2 §A.5).
+            # The host_prototype at the bottom of this LLD creates one
+            # Zabbix host per discovered camera (deduped by HW.ID per G2)
+            # and links the per-camera template. ICMP polling happens
+            # there, not at Site scope.
             - uuid: 9c4e1a82bf4b4e5b8d0a16e3f47c5928
               name: 'Cam [{#CAM.NAME}]: IP address'
               type: DEPENDENT
@@ -436,7 +402,7 @@ zabbix_export:
               params: |
                 (last(//milestone.cam.enabled[{#CAM.ID}])="false")*-1
                 + (last(//milestone.cam.enabled[{#CAM.ID}])="true")*(
-                    (last(//icmpping[{#CAM.ADDRESS}])=0)*2
+                    (last(/Camera-{#CAM.HW.ID}/icmpping)=0)*2
                     + (length(last(//milestone.cam.ess.comm.type[{#CAM.ID}]))>0
                        and last(//milestone.cam.ess.comm.type[{#CAM.ID}])<>"{$MILESTONE.ESS.TYPE.COMMUNICATION_OK}")*1
                   )
@@ -767,13 +733,15 @@ zabbix_export:
               params: |
                 (last(//milestone.cam.enabled[{#CAM.ID}])="false")*-1
                 + (last(//milestone.cam.enabled[{#CAM.ID}])="true")*(
-                    (last(//icmpping[{#CAM.ADDRESS}])=0)*2
+                    (last(/Camera-{#CAM.HW.ID}/icmpping)=0)*2
                     + (length(last(//milestone.cam.ess.comm.type[{#CAM.ID}]))>0
                        and last(//milestone.cam.ess.comm.type[{#CAM.ID}])<>"{$MILESTONE.ESS.TYPE.COMMUNICATION_OK}")*1
                   )
               description: |
                 Combined health score for honeycomb display. See item
                 prototype comments in the template for value meaning.
+                ICMP now sourced from the per-camera Zabbix host created by
+                the host_prototype (Camera-{#CAM.HW.ID}) per Plan §A.5/G4.
               valuemap:
                 name: 'Camera status'
               tags:
@@ -807,20 +775,68 @@ zabbix_export:
                 than the "Started" GUID. Requires
                 {$MILESTONE.ESS.TYPE.RECORDING_STARTED} and
                 {$MILESTONE.ESS.STATEGROUP.RECORDING} to be set.
-            - uuid: 8e37ed899b114140bd286f36d87c6567
-              expression: 'max(/Milestone XProtect by HTTP/icmpping[{#CAM.ADDRESS}],#3)=0 and last(/Milestone XProtect by HTTP/milestone.cam.enabled[{#CAM.ID}])="true"'
-              name: 'Cam [{#CAM.NAME}]: unreachable by ICMP'
-              status: DISABLED
-              priority: HIGH
-              description: |
-                DISABLED by default — see note above. Use the dashboard's
-                Camera Status honeycomb widget to view ICMP reachability.
-                Three consecutive ICMP pings to the camera's address
-                ({#CAM.ADDRESS}) have all failed and the camera is enabled
-                in XProtect. This may indicate a network or power issue
-                rather than a Milestone configuration problem.
+            # The "unreachable by ICMP" trigger prototype that lived here in
+            # v1.0 has MOVED to the per-camera host template
+            # 'Milestone Camera by Direct Polling' (per Plan v1.2 §A.5).
+            # Severity downgraded there to INFORMATION (G14) — the canonical
+            # "camera offline" alert is the milestone.cam.alarm calc item
+            # above, which folds ICMP + enabled + ESS state.
           master_item:
             key: 'milestone_cameras_read.sh[3600]'
+          host_prototypes:
+            - uuid: 6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b2d
+              host: 'Camera-{#CAM.HW.ID}'
+              name: '{#CAM.HW.NAME} ({#CAM.HW.IP})'
+              group_prototypes:
+                - name: 'Discovered hosts/Milestone Cameras'
+              templates:
+                - name: 'Milestone Camera by Direct Polling'
+              interfaces:
+                - type: AGENT
+                  useip: 'YES'
+                  ip: '{#CAM.HW.IP}'
+                  dns: ''
+                  port: '10050'
+                  main: 'YES'
+                - type: SNMP
+                  useip: 'YES'
+                  ip: '{#CAM.HW.IP}'
+                  dns: ''
+                  port: '161'
+                  main: 'NO'
+                  details:
+                    version: SNMPV2
+                    community: '{$MS.CAM.SNMP.COMMUNITY}'
+                    bulk: 'YES'
+              tags:
+                - tag: cam_id
+                  value: '{#CAM.ID}'
+                - tag: cam_hw_id
+                  value: '{#CAM.HW.ID}'
+                - tag: vendor
+                  value: '{#CAM.HW.VENDOR}'
+                - tag: site
+                  value: '{$MILESTONE.SITE.NAME}'
+              custom_interfaces: 'YES'
+          overrides:
+            # Bucket A/B/C bosch cameras (~2,400 of ~2,461 in pilot fleet) get
+            # the Bosch vendor sub-template additionally linked. Other
+            # vendors (Axis, Hanwha, …) ship as future sub-templates.
+            - name: 'Link Bosch sub-template for Bosch cameras'
+              step: 1
+              filter:
+                evaltype: AND
+                conditions:
+                  - macro: '{#CAM.HW.VENDOR}'
+                    value: '^bosch$'
+                    operator: MATCHES_REGEX
+                    formulaid: A
+              operations:
+                - operationobject: HOST_PROTOTYPE
+                  operator: REGEXP
+                  value: '^Camera-'
+                  optemplate:
+                    - name: 'Milestone Camera vendor - Bosch'
           lld_macro_paths:
             - lld_macro: '{#CAM.ADDRESS}'
               path: $.address
@@ -832,10 +848,47 @@ zabbix_export:
               path: $.mac
             - lld_macro: '{#CAM.NAME}'
               path: $.displayName
+            - lld_macro: '{#CAM.HW.ID}'
+              path: $.hardwareId
+            - lld_macro: '{#CAM.HW.NAME}'
+              path: $.hardwareName
+            - lld_macro: '{#CAM.HW.MODEL}'
+              path: $.hardwareModel
+            - lld_macro: '{#CAM.HW.IP}'
+              path: $.address
+            - lld_macro: '{#CAM.HW.VENDOR}'
+              path: $.vendor
           preprocessing:
             - type: JSONPATH
               parameters:
                 - '$.__array[*]'
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  // Synthesise per-camera 'vendor' field from hardwareModel
+                  // so the host_prototype LLD override can gate the Bosch
+                  // sub-template on it. Regex is case-insensitive and
+                  // prefix-tolerant (per M0_Bosch_Fleet_Compatibility.md
+                  // §2 — fleet model strings include 'Bosch ', 'BOSCH ',
+                  // and no-prefix variants of the same physical model).
+                  var arr = JSON.parse(value);
+                  for (var i = 0; i < arr.length; i++) {
+                    var m = String(arr[i].hardwareModel || '').toLowerCase();
+                    if (/^(?:bosch\s+)?(?:flexidome|dinion|autodome|nbn|nde|ndp|nds|ndv|nin|nbe|ntc)/.test(m)) {
+                      arr[i].vendor = 'bosch';
+                    } else if (/axis/.test(m)) {
+                      arr[i].vendor = 'axis';
+                    } else if (/hanwha|samsung/.test(m)) {
+                      arr[i].vendor = 'hanwha';
+                    } else if (/hikvision|hik\b/.test(m)) {
+                      arr[i].vendor = 'hikvision';
+                    } else if (/dahua/.test(m)) {
+                      arr[i].vendor = 'dahua';
+                    } else {
+                      arr[i].vendor = 'other';
+                    }
+                  }
+                  return JSON.stringify(arr);
         - uuid: 3f88ab587d5048fd8698550a4f951d01
           name: 'Milestone: Recording Server discovery'
           type: DEPENDENT
@@ -1035,6 +1088,15 @@ zabbix_export:
           description: 'http or https.'
         - macro: '{$MILESTONE.USER}'
           description: 'XProtect Basic user name.'
+        # ──────────────────────────────────────────────────────────────
+        # v1.2 additions — per-camera-host SNMP credentials + naming
+        # ──────────────────────────────────────────────────────────────
+        - macro: '{$MILESTONE.SITE.NAME}'
+          value: ''
+          description: 'Human-readable site name. Stamped onto every per-camera host as a "site" tag (per Plan v1.2 §C7 tag schema). Set to e.g. "BryantHS" / "AustinES" per-host or globally.'
+        - macro: '{$MS.CAM.SNMP.COMMUNITY}'
+          type: SECRET_TEXT
+          description: 'SNMPv1/v2c community for the per-camera host SNMP interface. Operator sets this once at the host_prototype level (template macro override on the Site host).'
       dashboards:
         - uuid: 698e3551a9f346029e3f312a95c20e5b
           name: 'Milestone XProtect overview'

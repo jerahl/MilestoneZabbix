@@ -1,0 +1,104 @@
+zabbix_export:
+  version: '7.4'
+  template_groups:
+    - uuid: ae594436d5584d85b34ddfa0b0e53a51
+      name: Templates/Video
+  templates:
+    - uuid: 7a3f1c2b9d4e4a8b8c7d6e5f4a3b2c1d
+      template: 'Milestone Camera by Direct Polling'
+      name: 'Milestone Camera by Direct Polling'
+      description: |
+        Per-camera Zabbix host monitoring template. Provides ICMP reachability
+        for the camera's primary IP. Vendor-specific monitoring (SNMP, RCP+)
+        ships via linked vendor sub-templates (e.g. "Milestone Camera vendor -
+        Bosch") which are conditionally linked by the Site-template's Camera
+        LLD based on the discovered {#CAM.HW.VENDOR} macro.
+
+        Linked automatically by the host_prototype under the Camera LLD on
+        "Milestone XProtect by HTTP". Operators don't link this template by
+        hand.
+
+        Per AP plan G14: the ICMP-down trigger on this template is
+        INFORMATION severity only. The canonical "camera offline" operator
+        alert remains the "Combined status" calculated item on the parent
+        Site host, which folds ICMP + enabled + ESS communication state
+        into a single state.
+
+        Required macros (defaults override at host_prototype creation time):
+        - {$MS.CAM.PING.INTERVAL} - ICMP poll interval. Default 1m.
+
+        Required host interface:
+        - AGENT interface with the camera's IP as the primary address.
+          (The host_prototype creates this from {#CAM.HW.IP}.)
+      vendor:
+        name: Community
+        version: 7.4-0
+      groups:
+        - name: Templates/Video
+      items:
+        - uuid: 9b8a7c6d5e4f4a3b2c1d0e9f8a7b6c5d
+          name: 'Cam: ICMP packet loss'
+          type: SIMPLE
+          key: 'icmppingloss'
+          delay: '{$MS.CAM.PING.INTERVAL}'
+          units: '%'
+          description: 'ICMP packet loss percentage to this camera.'
+          tags:
+            - tag: component
+              value: camera-ping
+            - tag: src
+              value: zbx
+        - uuid: 8c7b6a5d4e3f4a2b1c0d9e8f7a6b5c4d
+          name: 'Cam: ICMP round-trip avg'
+          type: SIMPLE
+          key: 'icmppingsec'
+          value_type: FLOAT
+          delay: '{$MS.CAM.PING.INTERVAL}'
+          units: s
+          description: 'Average ICMP round-trip time to this camera.'
+          tags:
+            - tag: component
+              value: camera-ping
+            - tag: src
+              value: zbx
+        - uuid: 7d6c5b4a3e2f4a1b0c9d8e7f6a5b4c3d
+          name: 'Cam: ICMP ping'
+          type: SIMPLE
+          key: 'icmpping'
+          delay: '{$MS.CAM.PING.INTERVAL}'
+          description: |
+            Basic ICMP reachability check. Per G14, an INFORMATION-severity
+            "unreachable" trigger fires on three consecutive failed pings;
+            the operator-visible alarm is the Site host's Combined status
+            calc which references this item via cross-host lookup keyed on
+            the cam_id tag.
+          valuemap:
+            name: 'Service state'
+          tags:
+            - tag: component
+              value: camera-ping
+            - tag: src
+              value: zbx
+          triggers:
+            - uuid: 6e5d4c3b2a1f4a0b9c8d7e6f5a4b3c2d
+              expression: 'max(/Milestone Camera by Direct Polling/icmpping,#3)=0'
+              name: 'Cam [{HOST.NAME}]: ICMP unreachable (3 consecutive)'
+              priority: INFORMATION
+              description: |
+                Three consecutive ICMP pings failed. Severity is
+                INFORMATION by design (G14) - this is an input signal,
+                not the operator-facing alarm. The Combined status calc
+                on the parent Site host folds this + enabled + ESS state
+                into the actual offline alert.
+      macros:
+        - macro: '{$MS.CAM.PING.INTERVAL}'
+          value: 1m
+          description: 'ICMP poll interval for this camera. Default 1m. Increase to 5m on sites with >500 cameras per G12.'
+      valuemaps:
+        - uuid: 5a4b3c2d1e0f4a9b8c7d6e5f4a3b2c1d
+          name: 'Service state'
+          mappings:
+            - value: '0'
+              newvalue: Down
+            - value: '1'
+              newvalue: Up
