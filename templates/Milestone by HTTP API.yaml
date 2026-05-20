@@ -792,11 +792,11 @@ zabbix_export:
               templates:
                 - name: 'Milestone Camera by Direct Polling'
               interfaces:
-                - type: ZBX_AGENT
-                  useip: 'YES'
-                  ip: '{#CAM.HW.IP}'
-                  dns: ''
-                  port: '10050'
+                # SNMP interface only - no Zabbix agent runs on the camera.
+                # ICMP simple checks (icmpping/icmppingloss/icmppingsec from
+                # the per-camera template) use whichever interface is
+                # primary on the host, which here is the SNMP one. They
+                # poll the IP regardless of interface type.
                 - type: SNMP
                   useip: 'YES'
                   ip: '{#CAM.HW.IP}'
