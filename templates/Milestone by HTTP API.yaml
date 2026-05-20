@@ -797,13 +797,11 @@ zabbix_export:
                   ip: '{#CAM.HW.IP}'
                   dns: ''
                   port: '10050'
-                  main: 'YES'
                 - type: SNMP
                   useip: 'YES'
                   ip: '{#CAM.HW.IP}'
                   dns: ''
                   port: '161'
-                  main: 'NO'
                   details:
                     version: SNMPV2
                     community: '{$MS.CAM.SNMP.COMMUNITY}'
