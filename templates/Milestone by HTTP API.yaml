@@ -821,7 +821,7 @@ zabbix_export:
             # the Bosch vendor sub-template additionally linked. Other
             # vendors (Axis, Hanwha, …) ship as future sub-templates.
             - name: 'Link Bosch sub-template for Bosch cameras'
-              step: 1
+              step: '1'
               filter:
                 evaltype: AND
                 conditions:
