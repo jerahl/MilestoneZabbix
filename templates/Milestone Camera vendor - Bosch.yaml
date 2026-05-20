@@ -1,10 +1,10 @@
 zabbix_export:
   version: '7.4'
   template_groups:
-    - uuid: ae594436d5584d85b34ddfa0b0e53a51
+    - uuid: 2fa28b2c49cd48868e3fba44cf618414
       name: Templates/Video
   templates:
-    - uuid: 4b3a2c1d0e9f4a8b7c6d5e4f3a2b1c0d
+    - uuid: 4f919a38df614ac0b28bd8d04129bdf1
       template: 'Milestone Camera vendor - Bosch'
       name: 'Milestone Camera vendor - Bosch'
       description: |
@@ -62,7 +62,7 @@ zabbix_export:
         # ──────────────────────────────────────────────────────────────
         # Device identity (Bosch private branch + sysDescr)
         # ──────────────────────────────────────────────────────────────
-        - uuid: 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d
+        - uuid: c451e30005e3429c9da991f1e59c5fad
           name: 'Bosch: Vendor string'
           type: SNMP_AGENT
           snmp_oid: '1.3.6.1.4.1.3967.1.1.1.7.0'
@@ -83,7 +83,7 @@ zabbix_export:
               value: bosch-identity
             - tag: src
               value: zbx
-        - uuid: 2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e
+        - uuid: afaf8a5fa91742cabc7ad7ea2d6a5a3d
           name: 'Bosch: Model'
           type: SNMP_AGENT
           snmp_oid: '1.3.6.1.4.1.3967.1.1.5.1.0'
@@ -104,7 +104,7 @@ zabbix_export:
               value: bosch-identity
             - tag: src
               value: zbx
-        - uuid: 3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f
+        - uuid: a2e3228f8cda45e7951a055c8fed14b4
           name: 'Bosch: Firmware short code'
           type: SNMP_AGENT
           snmp_oid: '1.3.6.1.4.1.3967.1.1.1.5.0'
@@ -128,7 +128,7 @@ zabbix_export:
               value: bosch-identity
             - tag: src
               value: zbx
-        - uuid: 4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a
+        - uuid: aa89026db7e5481cafb1a8b74626d7b0
           name: 'Bosch: Hardware platform code'
           type: SNMP_AGENT
           snmp_oid: '1.3.6.1.4.1.3967.1.1.1.4.0'
@@ -152,7 +152,7 @@ zabbix_export:
               value: bosch-identity
             - tag: src
               value: zbx
-        - uuid: 5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b
+        - uuid: c6549ce0b52946f5a5c62f74d8282b0c
           name: 'Bosch: Board fingerprint'
           type: SNMP_AGENT
           snmp_oid: '1.3.6.1.4.1.3967.1.1.1.6.0'
@@ -172,7 +172,7 @@ zabbix_export:
               value: bosch-identity
             - tag: src
               value: zbx
-        - uuid: 6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c
+        - uuid: 729053b08b244bacbe4ef513a7e9a1c9
           name: 'Bosch: VMS endpoint (camera-side record)'
           type: SNMP_AGENT
           snmp_oid: '1.3.6.1.4.1.3967.1.5.2.1.1.1'
@@ -198,7 +198,7 @@ zabbix_export:
         # ──────────────────────────────────────────────────────────────
         # Bucket gating - the rest of the template's items reference this
         # ──────────────────────────────────────────────────────────────
-        - uuid: 7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d
+        - uuid: 792181fe80b44790a3d8e2f1d65be195
           name: 'Bosch: Has full Bosch MIB?'
           type: CALCULATED
           key: bosch.dev.has_full_mib
@@ -225,7 +225,7 @@ zabbix_export:
         # Standard MIB-II + HOST-RESOURCES (works on every Bosch
         # generation that runs net-snmpd, including bucket B and C)
         # ──────────────────────────────────────────────────────────────
-        - uuid: 8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e
+        - uuid: 4c018f52272a4ffbbcfae398e8d7169b
           name: 'Cam: System uptime (kernel boot)'
           type: SNMP_AGENT
           snmp_oid: '1.3.6.1.2.1.25.1.1.0'
@@ -246,12 +246,12 @@ zabbix_export:
             - tag: src
               value: zbx
           triggers:
-            - uuid: 9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f
+            - uuid: 93d056407c3c42e2b4ca31118ea14502
               expression: 'last(/Milestone Camera vendor - Bosch/bosch.cam.uptime)<10m'
               name: 'Cam [{HOST.NAME}]: rebooted (uptime <10m)'
               priority: INFO
               description: 'Camera kernel uptime less than 10 minutes - it rebooted recently.'
-        - uuid: 0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a
+        - uuid: 29e1cabab533475a8918a27eb1a5c450
           name: 'Cam: Process count'
           type: SNMP_AGENT
           snmp_oid: '1.3.6.1.2.1.25.1.6.0'
@@ -267,12 +267,12 @@ zabbix_export:
             - tag: src
               value: zbx
           triggers:
-            - uuid: 1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b
+            - uuid: cc541fa5f67e4e8e822e3b5ed1cde3b7
               expression: 'last(/Milestone Camera vendor - Bosch/bosch.cam.process.count)<80 and last(/Milestone Camera vendor - Bosch/bosch.cam.uptime)>10m'
               name: 'Cam [{HOST.NAME}]: process count low ({ITEM.VALUE})'
               priority: AVERAGE
               description: 'Process count below baseline - camera may be partly booted or services missing. Suppressed for 10m post-boot.'
-        - uuid: 2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c
+        - uuid: bc906fababe24696941ccab41f5a3906
           name: 'Cam: CPU average %'
           type: CALCULATED
           key: bosch.cam.cpu.avg.pct
@@ -291,7 +291,7 @@ zabbix_export:
             - tag: src
               value: zbx
           triggers:
-            - uuid: 3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d
+            - uuid: 138e016196c44b028771a1a804313283
               expression: 'avg(/Milestone Camera vendor - Bosch/bosch.cam.cpu.avg.pct,15m)>90'
               name: 'Cam [{HOST.NAME}]: CPU sustained >90% for 15m'
               priority: WARNING
@@ -300,7 +300,7 @@ zabbix_export:
         # ──────────────────────────────────────────────────────────────
         # CPU cores LLD - hrProcessorTable
         # ──────────────────────────────────────────────────────────────
-        - uuid: 4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e
+        - uuid: 50d21b1902354ad49759f8ad8160e426
           name: 'Bosch: CPU core discovery'
           type: SNMP_AGENT
           snmp_oid: 'discovery[{#SNMPINDEX},1.3.6.1.2.1.25.3.3.1.2]'
@@ -311,7 +311,7 @@ zabbix_export:
             (both 5100i and 7000i, both firmware tracks) report 4 cores
             at indices 196608..196611 - stable across firmware updates.
           item_prototypes:
-            - uuid: 5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f
+            - uuid: c60acd5200294ebdb716babf994f64cf
               name: 'Cam CPU core {#SNMPINDEX}: % busy'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.25.3.3.1.2.{#SNMPINDEX}'
@@ -329,7 +329,7 @@ zabbix_export:
         # ──────────────────────────────────────────────────────────────
         # Filesystem LLD - hrStorageTable, by name not by index (G32)
         # ──────────────────────────────────────────────────────────────
-        - uuid: 6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a
+        - uuid: 3ef0e7b64e2e4bb5a79c2ed4f0375815
           name: 'Bosch: Filesystem discovery'
           type: SNMP_AGENT
           snmp_oid: 'discovery[{#SNMPINDEX},1.3.6.1.2.1.25.2.3.1.1,{#FSNAME},1.3.6.1.2.1.25.2.3.1.3,{#FSTYPE},1.3.6.1.2.1.25.2.3.1.2]'
@@ -360,7 +360,7 @@ zabbix_export:
                   }
                   return JSON.stringify(arr);
           item_prototypes:
-            - uuid: 7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b
+            - uuid: bbc64b4a30ad4e6892f17bd68a8348f3
               name: 'Cam FS [{#FSNAME}]: used %'
               type: CALCULATED
               key: 'bosch.cam.fs.used.pct[{#FSNAME}]'
@@ -376,12 +376,12 @@ zabbix_export:
                 - tag: src
                   value: zbx
               trigger_prototypes:
-                - uuid: 8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c
+                - uuid: a2730606267648eb87f4bae87c8449af
                   expression: 'last(/Milestone Camera vendor - Bosch/bosch.cam.fs.used.pct[{#FSNAME}])>90 and ({#FSNAME}="/data" or {#FSNAME}="/var/log")'
                   name: 'Cam [{HOST.NAME}]: FS {#FSNAME} >90% used'
                   priority: AVERAGE
                   description: 'Only triggers on the persistent /data and /var/log mounts; tmpfs mounts (/run/*, /tmp, etc.) auto-cap and are not alerting.'
-            - uuid: 9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d
+            - uuid: f5cae53300494dbdadb95ced7eaa2c69
               name: 'Cam FS [{#FSNAME}]: total (alloc units)'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.25.2.3.1.5.{#SNMPINDEX}'
@@ -394,7 +394,7 @@ zabbix_export:
                   value: '{#FSNAME}'
                 - tag: src
                   value: zbx
-            - uuid: 0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e
+            - uuid: e08ffcac8bd946db8967b953d0d1395e
               name: 'Cam FS [{#FSNAME}]: used (alloc units)'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.25.2.3.1.6.{#SNMPINDEX}'
@@ -411,7 +411,7 @@ zabbix_export:
         # ──────────────────────────────────────────────────────────────
         # Network interface LLD - ifTable, by name not by index (G32)
         # ──────────────────────────────────────────────────────────────
-        - uuid: 1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f
+        - uuid: a227943d9d7b40cea82e090986b3db74
           name: 'Bosch: Network interface discovery'
           type: SNMP_AGENT
           snmp_oid: 'discovery[{#SNMPINDEX},1.3.6.1.2.1.2.2.1.1,{#IFNAME},1.3.6.1.2.1.2.2.1.2]'
@@ -443,7 +443,7 @@ zabbix_export:
                   }
                   return JSON.stringify(arr);
           item_prototypes:
-            - uuid: 2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a
+            - uuid: 132ed4ab28c34c7aa7924eb688ecd69a
               name: 'Cam IF [{#IFNAME}]: oper status'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.2.2.1.8.{#SNMPINDEX}'
@@ -459,11 +459,11 @@ zabbix_export:
                 - tag: src
                   value: zbx
               trigger_prototypes:
-                - uuid: 3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b
+                - uuid: e4e305e6986a4def890b2718faa09e9f
                   expression: 'last(/Milestone Camera vendor - Bosch/bosch.cam.if.oper.status[{#IFNAME}])=2'
                   name: 'Cam [{HOST.NAME}]: interface {#IFNAME} down'
                   priority: WARNING
-            - uuid: 4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c
+            - uuid: 6df93e73375f4b72a9c5609a87002bfa
               name: 'Cam IF [{#IFNAME}]: link speed'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.2.2.1.5.{#SNMPINDEX}'
@@ -477,7 +477,7 @@ zabbix_export:
                   value: '{#IFNAME}'
                 - tag: src
                   value: zbx
-            - uuid: 5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d
+            - uuid: cfae1d253a1f4f6e8f7856222f75a69f
               name: 'Cam IF [{#IFNAME}]: incoming bps'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.2.2.1.10.{#SNMPINDEX}'
@@ -500,7 +500,7 @@ zabbix_export:
                   value: '{#IFNAME}'
                 - tag: src
                   value: zbx
-            - uuid: 6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e
+            - uuid: c10bc9d82bb44b52b18b5d87790c13f5
               name: 'Cam IF [{#IFNAME}]: outgoing bps'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.2.2.1.16.{#SNMPINDEX}'
@@ -524,7 +524,7 @@ zabbix_export:
         # Per-imager LLD - .3967.1.1.1.3.1.1
         # Single-imager FLEXIDOMEs return N=1; multi-imager housings N=4.
         # ──────────────────────────────────────────────────────────────
-        - uuid: 7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f
+        - uuid: 45e8a52573b544ee883423fb102c9d23
           name: 'Bosch: Imager discovery'
           type: SNMP_AGENT
           snmp_oid: 'discovery[{#IMAGER.IDX},1.3.6.1.4.1.3967.1.1.1.3.1.1]'
@@ -549,7 +549,7 @@ zabbix_export:
                   }
                   return JSON.stringify(arr);
           item_prototypes:
-            - uuid: 8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a
+            - uuid: b70c4de61f574b768e77eb6bc0da40cd
               name: 'Imager {#IMAGER.IDX}: VCA motion active'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.4.1.3967.1.3.2.1.1.{#IMAGER.IDX}'
@@ -570,7 +570,7 @@ zabbix_export:
                   value: '{#IMAGER.IDX}'
                 - tag: src
                   value: zbx
-            - uuid: 9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b
+            - uuid: 72fd24577c8740e696f8687d08666979
               name: 'Imager {#IMAGER.IDX}: alarm detail bitmap'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.4.1.3967.1.3.3.1.1.{#IMAGER.IDX}'
@@ -588,7 +588,7 @@ zabbix_export:
                   value: '{#IMAGER.IDX}'
                 - tag: src
                   value: zbx
-            - uuid: 0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c
+            - uuid: ea2fad81db254bdc8b9670f7ac50e4ce
               name: 'Imager {#IMAGER.IDX}: motion-trip indicator'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.4.1.3967.1.1.4.1.1.2.{#IMAGER.IDX}'
@@ -605,7 +605,7 @@ zabbix_export:
                   value: '{#IMAGER.IDX}'
                 - tag: src
                   value: zbx
-            - uuid: 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6e
+            - uuid: d8660e9417bc4182a21074c3eddb6419
               name: 'Imager {#IMAGER.IDX}: encoder slot 1 raw'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.4.1.3967.1.2.2.1.1.{#IMAGER.IDX}'
@@ -625,7 +625,7 @@ zabbix_export:
                   value: '{#IMAGER.IDX}'
                 - tag: src
                   value: zbx
-            - uuid: 2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7f
+            - uuid: 4c807442d7a447dfb360f7f429134d1e
               name: 'Imager {#IMAGER.IDX}: encoder bitrate'
               type: DEPENDENT
               key: 'bosch.imager.encoder.bitrate.kbps[{#IMAGER.IDX}]'
@@ -658,7 +658,7 @@ zabbix_export:
                 - tag: src
                   value: zbx
               trigger_prototypes:
-                - uuid: 3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8a
+                - uuid: 274870a275c14e5aac8727fe0264c4ec
                   expression: 'avg(/Milestone Camera vendor - Bosch/bosch.imager.encoder.bitrate.kbps[{#IMAGER.IDX}],15m)<100 and last(/Milestone Camera vendor - Bosch/bosch.dev.has_full_mib)=1'
                   name: 'Imager {#IMAGER.IDX} on [{HOST.NAME}]: encoder bitrate <100 kbps for 15m (may be stalled or scene fully static)'
                   priority: INFO
@@ -675,14 +675,14 @@ zabbix_export:
           value: 1m
           description: 'Faster poll for alarm OIDs - 1m catches sub-minute VCA trips.'
       valuemaps:
-        - uuid: 4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9b
+        - uuid: 4cc6b33c6db54ebdb11d0fb0eb8993a4
           name: 'Bool string'
           mappings:
             - value: '0'
               newvalue: Idle
             - value: '1'
               newvalue: Active
-        - uuid: 5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0c
+        - uuid: 42f74dbcd7fd4b3c854d41b668f62f4d
           name: 'IfOperStatus'
           mappings:
             - value: '1'

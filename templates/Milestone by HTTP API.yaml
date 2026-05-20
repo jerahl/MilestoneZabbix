@@ -784,7 +784,7 @@ zabbix_export:
           master_item:
             key: 'milestone_cameras_read.sh[3600]'
           host_prototypes:
-            - uuid: 6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b2d
+            - uuid: 481d66ed2de544388bc481cd69a1679d
               host: 'Camera-{#CAM.HW.ID}'
               name: '{#CAM.HW.NAME} ({#CAM.HW.IP})'
               group_prototypes:
