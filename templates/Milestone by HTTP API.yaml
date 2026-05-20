@@ -3,6 +3,9 @@ zabbix_export:
   template_groups:
     - uuid: ae594436d5584d85b34ddfa0b0e53a51
       name: Templates/Video
+  host_groups:
+    - uuid: 99310a006c1d46b780561689af7af80e
+      name: 'Discovered hosts/Milestone Cameras'
   templates:
     - uuid: 26b1f4278c4744049d0c9c6d1289d29e
       template: 'Milestone XProtect by HTTP'
@@ -790,8 +793,9 @@ zabbix_export:
             - uuid: 481d66ed2de544388bc481cd69a1679d
               host: 'Camera-{#CAM.HW.ID}'
               name: '{#CAM.HW.NAME} ({#CAM.HW.IP})'
-              group_prototypes:
-                - name: 'Discovered hosts/Milestone Cameras'
+              group_links:
+                - group:
+                    name: 'Discovered hosts/Milestone Cameras'
               templates:
                 - name: 'Milestone Camera by Direct Polling'
               interfaces:
