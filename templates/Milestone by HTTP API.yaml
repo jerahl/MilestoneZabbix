@@ -402,7 +402,7 @@ zabbix_export:
               params: |
                 (last(//milestone.cam.enabled[{#CAM.ID}])="false")*-1
                 + (last(//milestone.cam.enabled[{#CAM.ID}])="true")*(
-                    (last(/Camera-{#CAM.HW.ID}/icmpping)=0)*2
+                    (max(last_foreach(/*/icmpping?[tag="cam_id" and value="{#CAM.ID}"]))=0)*2
                     + (length(last(//milestone.cam.ess.comm.type[{#CAM.ID}]))>0
                        and last(//milestone.cam.ess.comm.type[{#CAM.ID}])<>"{$MILESTONE.ESS.TYPE.COMMUNICATION_OK}")*1
                   )
@@ -733,15 +733,18 @@ zabbix_export:
               params: |
                 (last(//milestone.cam.enabled[{#CAM.ID}])="false")*-1
                 + (last(//milestone.cam.enabled[{#CAM.ID}])="true")*(
-                    (last(/Camera-{#CAM.HW.ID}/icmpping)=0)*2
+                    (max(last_foreach(/*/icmpping?[tag="cam_id" and value="{#CAM.ID}"]))=0)*2
                     + (length(last(//milestone.cam.ess.comm.type[{#CAM.ID}]))>0
                        and last(//milestone.cam.ess.comm.type[{#CAM.ID}])<>"{$MILESTONE.ESS.TYPE.COMMUNICATION_OK}")*1
                   )
               description: |
                 Combined health score for honeycomb display. See item
                 prototype comments in the template for value meaning.
-                ICMP now sourced from the per-camera Zabbix host created by
-                the host_prototype (Camera-{#CAM.HW.ID}) per Plan §A.5/G4.
+                ICMP is sourced from the per-camera Zabbix host via the
+                cam_id tag (G4 + G23): the host_prototype stamps
+                cam_id={#CAM.ID} on every per-camera host, so its icmpping
+                item carries the tag by inheritance; last_foreach matches
+                across hosts by that tag and max() wraps for scalar use.
               valuemap:
                 name: 'Camera status'
               tags:
