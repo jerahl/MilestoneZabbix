@@ -377,7 +377,7 @@ zabbix_export:
                   value: zbx
               trigger_prototypes:
                 - uuid: a2730606267648eb87f4bae87c8449af
-                  expression: 'last(//bosch.cam.fs.used.pct[{#SNMPINDEX}])>90'
+                  expression: 'last(/Milestone Camera vendor - Bosch/bosch.cam.fs.used.pct[{#SNMPINDEX}])>90'
                   name: 'Cam [{HOST.NAME}]: FS {#FSNAME} >90% used'
                   priority: AVERAGE
                   description: |
@@ -465,7 +465,7 @@ zabbix_export:
                   value: zbx
               trigger_prototypes:
                 - uuid: e4e305e6986a4def890b2718faa09e9f
-                  expression: 'last(//bosch.cam.if.oper.status[{#IFNAME}])=2'
+                  expression: 'last(/Milestone Camera vendor - Bosch/bosch.cam.if.oper.status[{#IFNAME}])=2'
                   name: 'Cam [{HOST.NAME}]: interface {#IFNAME} down'
                   priority: WARNING
             - uuid: 6df93e73375f4b72a9c5609a87002bfa
@@ -664,7 +664,7 @@ zabbix_export:
                   value: zbx
               trigger_prototypes:
                 - uuid: 274870a275c14e5aac8727fe0264c4ec
-                  expression: 'avg(//bosch.imager.encoder.bitrate.kbps[{#IMAGER.IDX}],15m)<100 and last(//bosch.dev.has_full_mib)=1'
+                  expression: 'avg(/Milestone Camera vendor - Bosch/bosch.imager.encoder.bitrate.kbps[{#IMAGER.IDX}],15m)<100 and last(/Milestone Camera vendor - Bosch/bosch.dev.has_full_mib)=1'
                   name: 'Imager {#IMAGER.IDX} on [{HOST.NAME}]: encoder bitrate <100 kbps for 15m (may be stalled or scene fully static)'
                   priority: INFO
                   description: |
