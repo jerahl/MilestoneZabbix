@@ -249,7 +249,7 @@ zabbix_export:
             - uuid: 9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f
               expression: 'last(/Milestone Camera vendor - Bosch/bosch.cam.uptime)<10m'
               name: 'Cam [{HOST.NAME}]: rebooted (uptime <10m)'
-              priority: INFORMATION
+              priority: INFO
               description: 'Camera kernel uptime less than 10 minutes - it rebooted recently.'
         - uuid: 0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a
           name: 'Cam: Process count'
@@ -661,7 +661,7 @@ zabbix_export:
                 - uuid: 3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8a
                   expression: 'avg(/Milestone Camera vendor - Bosch/bosch.imager.encoder.bitrate.kbps[{#IMAGER.IDX}],15m)<100 and last(/Milestone Camera vendor - Bosch/bosch.dev.has_full_mib)=1'
                   name: 'Imager {#IMAGER.IDX} on [{HOST.NAME}]: encoder bitrate <100 kbps for 15m (may be stalled or scene fully static)'
-                  priority: INFORMATION
+                  priority: INFO
                   description: |
                     Gated on bosch.dev.has_full_mib=1 so this only fires on
                     bucket-A cameras where the encoder telemetry is known

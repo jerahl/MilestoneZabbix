@@ -83,7 +83,7 @@ zabbix_export:
             - uuid: 6e5d4c3b2a1f4a0b9c8d7e6f5a4b3c2d
               expression: 'max(/Milestone Camera by Direct Polling/icmpping,#3)=0'
               name: 'Cam [{HOST.NAME}]: ICMP unreachable (3 consecutive)'
-              priority: INFORMATION
+              priority: INFO
               description: |
                 Three consecutive ICMP pings failed. Severity is
                 INFORMATION by design (G14) - this is an input signal,
