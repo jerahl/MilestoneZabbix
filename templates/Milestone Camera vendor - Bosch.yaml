@@ -375,17 +375,11 @@ zabbix_export:
                   value: '{#FSNAME}'
                 - tag: src
                   value: zbx
-              trigger_prototypes:
-                - uuid: a2730606267648eb87f4bae87c8449af
-                  expression: 'last(/Milestone Camera vendor - Bosch/bosch.cam.fs.used.pct[{#SNMPINDEX}])>90'
-                  name: 'Cam [{HOST.NAME}]: FS {#FSNAME} >90% used'
-                  priority: AVERAGE
-                  description: |
-                    Path filter (only /data and /var/log) moved up to the
-                    LLD itself — the trigger fires on any discovered FS at
-                    >90%. Zabbix doesn't allow string-literal LLD-macro
-                    comparison in trigger expressions, so this is the
-                    correct factoring.
+              # NOTE: a >90%-used trigger prototype lived here in v1 but
+              # Zabbix's trigger-expression parser kept rejecting the
+              # LLD-macro item-key form across multiple variants. Removed
+              # for v1.0; operators can add per-site triggers via the UI
+              # if FS-fill alerts are needed. Items continue to populate.
             - uuid: f5cae53300494dbdadb95ced7eaa2c69
               name: 'Cam FS [{#SNMPINDEX}]: total (alloc units)'
               type: SNMP_AGENT
