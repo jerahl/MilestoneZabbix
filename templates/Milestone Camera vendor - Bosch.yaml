@@ -305,7 +305,7 @@ zabbix_export:
           type: SNMP_AGENT
           snmp_oid: 'discovery[{#SNMPINDEX},1.3.6.1.2.1.25.3.3.1.2]'
           key: bosch.cam.cpu.discovery
-          delay: 1d
+          delay: 1h
           description: |
             Discovers per-core CPU% via hrProcessorTable. Pilot boxes
             (both 5100i and 7000i, both firmware tracks) report 4 cores
@@ -334,7 +334,7 @@ zabbix_export:
           type: SNMP_AGENT
           snmp_oid: 'discovery[{#SNMPINDEX},1.3.6.1.2.1.25.2.3.1.1,{#FSNAME},1.3.6.1.2.1.25.2.3.1.3,{#FSTYPE},1.3.6.1.2.1.25.2.3.1.2]'
           key: bosch.cam.fs.discovery
-          delay: 1d
+          delay: 1h
           description: |
             G32: discover by name not index. Bosch firmware updates
             renumber hrStorage indices (/data moved from idx 49 to 47
@@ -416,7 +416,7 @@ zabbix_export:
           type: SNMP_AGENT
           snmp_oid: 'discovery[{#SNMPINDEX},1.3.6.1.2.1.2.2.1.1,{#IFNAME},1.3.6.1.2.1.2.2.1.2]'
           key: bosch.cam.if.discovery
-          delay: 1d
+          delay: 1h
           description: |
             G32: discover by name not index. Bosch firmware updates
             renumber ifIndex (eth0 moved from idx 2 to idx 3 across
@@ -529,7 +529,7 @@ zabbix_export:
           type: SNMP_AGENT
           snmp_oid: 'discovery[{#IMAGER.IDX},1.3.6.1.4.1.3967.1.1.1.3.1.1]'
           key: bosch.imager.discovery
-          delay: 1d
+          delay: 1h
           description: |
             Walks the per-imager name table. 1 row on single-imager
             FLEXIDOMEs (5100i, 4000i, 3000i); 4 rows on multi-imager
