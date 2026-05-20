@@ -833,7 +833,7 @@ zabbix_export:
                 - operationobject: HOST_PROTOTYPE
                   operator: REGEXP
                   value: '^Camera-'
-                  optemplate:
+                  templates:
                     - name: 'Milestone Camera vendor - Bosch'
           lld_macro_paths:
             - lld_macro: '{#CAM.ADDRESS}'
