@@ -361,13 +361,13 @@ zabbix_export:
                   return JSON.stringify(arr);
           item_prototypes:
             - uuid: bbc64b4a30ad4e6892f17bd68a8348f3
-              name: 'Cam FS ["{#FSNAME}"]: used %'
+              name: 'Cam FS [{#SNMPINDEX}]: used %'
               type: CALCULATED
-              key: 'bosch.cam.fs.used.pct["{#FSNAME}"]'
+              key: 'bosch.cam.fs.used.pct[{#SNMPINDEX}]'
               value_type: FLOAT
               delay: '{$MS.CAM.BOSCH.POLL.INTERVAL}'
               units: '%'
-              params: 'last(//bosch.cam.fs.used.units["{#FSNAME}"])*100/last(//bosch.cam.fs.total.units["{#FSNAME}"])'
+              params: 'last(//bosch.cam.fs.used.units[{#SNMPINDEX}])*100/last(//bosch.cam.fs.total.units[{#SNMPINDEX}])'
               tags:
                 - tag: component
                   value: bosch-fs
@@ -377,7 +377,7 @@ zabbix_export:
                   value: zbx
               trigger_prototypes:
                 - uuid: a2730606267648eb87f4bae87c8449af
-                  expression: 'last(//bosch.cam.fs.used.pct["{#FSNAME}"])>90'
+                  expression: 'last(//bosch.cam.fs.used.pct[{#SNMPINDEX}])>90'
                   name: 'Cam [{HOST.NAME}]: FS {#FSNAME} >90% used'
                   priority: AVERAGE
                   description: |
@@ -387,10 +387,10 @@ zabbix_export:
                     comparison in trigger expressions, so this is the
                     correct factoring.
             - uuid: f5cae53300494dbdadb95ced7eaa2c69
-              name: 'Cam FS ["{#FSNAME}"]: total (alloc units)'
+              name: 'Cam FS [{#SNMPINDEX}]: total (alloc units)'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.25.2.3.1.5.{#SNMPINDEX}'
-              key: 'bosch.cam.fs.total.units["{#FSNAME}"]'
+              key: 'bosch.cam.fs.total.units[{#SNMPINDEX}]'
               delay: 1h
               tags:
                 - tag: component
@@ -400,10 +400,10 @@ zabbix_export:
                 - tag: src
                   value: zbx
             - uuid: e08ffcac8bd946db8967b953d0d1395e
-              name: 'Cam FS ["{#FSNAME}"]: used (alloc units)'
+              name: 'Cam FS [{#SNMPINDEX}]: used (alloc units)'
               type: SNMP_AGENT
               snmp_oid: '1.3.6.1.2.1.25.2.3.1.6.{#SNMPINDEX}'
-              key: 'bosch.cam.fs.used.units["{#FSNAME}"]'
+              key: 'bosch.cam.fs.used.units[{#SNMPINDEX}]'
               delay: '{$MS.CAM.BOSCH.POLL.INTERVAL}'
               tags:
                 - tag: component
