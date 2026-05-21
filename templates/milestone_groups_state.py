@@ -138,6 +138,7 @@ def fetch_camera_groups(
     base: str, token: str, ctx: ssl.SSLContext | None,
     timeout: float, api_base: str, page_size: int,
     include_cameras: bool, debug: bool = False,
+    endpoint_override: str | None = None,
 ) -> tuple[list[dict], str]:
     """Fetch camera groups + their child cameras / subgroups.
 
@@ -208,12 +209,23 @@ def fetch_camera_groups(
                 return v
         return []
 
-    # Step 1: find the right endpoint name. Try the spec name first.
-    endpoints_to_try = ["cameraGroups", "deviceGroups", "groups"]
+    # Step 1: find the right endpoint name. If --endpoint was given,
+    # honour it exclusively (operator knows their install). Otherwise
+    # try the spec name first, then common alternates. On a fallback
+    # chain, an endpoint that returns 200 but EMPTY array isn't the
+    # winner — we keep trying so an install that has groups on
+    # /deviceGroups but an empty /cameraGroups still finds them.
+    if endpoint_override:
+        endpoints_to_try = [endpoint_override]
+        _log(f"--endpoint override: trying only /{endpoint_override}")
+    else:
+        endpoints_to_try = ["cameraGroups", "deviceGroups", "groups"]
+
     chosen_endpoint = None
     groups: list[dict] = []
     last_status = None
     last_body   = ""
+    empty_200_endpoints: list[str] = []  # endpoints that exist but are empty
     for endpoint in endpoints_to_try:
         url = f"{base}{api_base}/{endpoint}"
         _log(f"GET {url}  (looking for endpoint)")
@@ -224,14 +236,27 @@ def fetch_camera_groups(
             continue
         if status == 200 and payload is not None:
             arr = _unpack(payload)
-            chosen_endpoint = endpoint
-            groups = arr
-            _log(f"  -> endpoint found: /{endpoint} returned {len(arr)} group(s)")
-            break
-        # Any other status — let the caller see the message.
+            _log(f"  -> /{endpoint} returned {len(arr)} group(s)")
+            if arr:
+                # Non-empty wins.
+                chosen_endpoint = endpoint
+                groups = arr
+                break
+            # Empty 200 — remember it but keep trying alternates.
+            empty_200_endpoints.append(endpoint)
+            continue
+        # Non-200, non-404 — surface to caller.
         raise RuntimeError(
             f"/{endpoint} returned HTTP {status}: {body!r}"
         )
+
+    # If nothing non-empty matched, fall back to the first endpoint
+    # that responded 200 (so we still produce a valid empty snapshot
+    # rather than erroring out).
+    if chosen_endpoint is None and empty_200_endpoints:
+        chosen_endpoint = empty_200_endpoints[0]
+        _log(f"  -> all endpoints empty; using /{chosen_endpoint} "
+             f"as the canonical name for the empty snapshot")
 
     if chosen_endpoint is None:
         raise RuntimeError(
@@ -431,6 +456,12 @@ def main() -> int:
                          "figure out which groups endpoint your "
                          "XProtect version exposes when the snapshot "
                          "comes back empty.")
+    ap.add_argument("--endpoint", default=None,
+                    help="Force a specific groups endpoint name. "
+                         "Default: try cameraGroups, then deviceGroups, "
+                         "then groups (in order). Pass --endpoint "
+                         "deviceGroups to hit /api/rest/v1/deviceGroups "
+                         "directly, skipping the cameraGroups probe.")
     args = ap.parse_args()
 
     base = f"{args.scheme}://{args.host}"
@@ -471,6 +502,7 @@ def main() -> int:
             args.api_base, args.page_size,
             include_cameras=not args.no_cameras,
             debug=args.debug,
+            endpoint_override=args.endpoint,
         )
     except RuntimeError as e:
         print(json.dumps({"error": "api_error", "detail": str(e)}),
