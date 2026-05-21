@@ -280,6 +280,25 @@ def fetch_camera_groups(
               file=sys.stderr)
         return groups, chosen_endpoint
 
+    # Per-group cameras only make sense for endpoints that own cameras
+    # directly. /viewGroups holds saved client layouts (cameras are
+    # buried inside view XML) and other *Groups endpoints similarly
+    # don't expose a /cameras subresource. Skip cleanly with a hint.
+    GROUPS_WITHOUT_CAMERAS_SUBRESOURCE = {
+        "viewGroups", "layoutGroups", "eventTypeGroups", "stateGroups",
+        "failoverGroups", "accessControlGroups",
+        "microphoneGroups", "speakerGroups", "metadataGroups",
+        "inputEventGroups", "outputGroups",
+    }
+    if include_cameras and chosen_endpoint in GROUPS_WITHOUT_CAMERAS_SUBRESOURCE:
+        print(f"[groups] /{chosen_endpoint} does not expose a /cameras "
+              f"subresource — cameras per group will be empty. Pass "
+              f"--no-cameras to silence this message. If you wanted "
+              f"camera organisation, --endpoint cameraGroups is the "
+              f"only spec-blessed path.",
+              file=sys.stderr)
+        include_cameras = False
+
     if include_cameras:
         _log(f"  -> enumerating cameras for {len(groups)} group(s) "
              f"via /{chosen_endpoint}/{{id}}/cameras")
