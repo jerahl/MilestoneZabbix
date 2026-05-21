@@ -139,19 +139,38 @@ def fetch_camera_groups(
     timeout: float, api_base: str, page_size: int,
     include_cameras: bool, debug: bool = False,
 ) -> tuple[list[dict], str]:
-    """Find the groups endpoint and return (records, endpoint_name).
+    """Fetch camera groups + their child cameras / subgroups.
 
-    XProtect's REST surface has shifted the groups path across versions:
-        /api/rest/v1/cameraGroups      — older / Smart Client native
-        /api/rest/v1/deviceGroups      — newer canonical name
-        /api/rest/v1/groups            — legacy fallback
+    Per the Milestone OpenAPI spec (Grouping section):
 
-    Some installs only expose one of the three; we probe each in turn,
-    try with includeChildren first, then without, then strip the param
-    entirely. Whichever returns a non-empty array wins.
+        GET /cameraGroups                         -> { "array": [<group>, ...] }
+        GET /cameraGroups/{id}/cameras            -> { "array": [<camera>, ...] }
+        GET /cameraGroups/{id}/cameraGroups       -> { "array": [<group>, ...] }
+        GET /cameraGroups/{id}?includeChildren=cameras       -> group w/ cameras inline
+        GET /cameraGroups/{id}?includeChildren=cameraGroups  -> group w/ subgroups inline
 
-    Returns the raw records plus the endpoint name that succeeded so
-    operators can see which path their install uses (logged to stderr).
+    The spec documents NO page/size pagination on this endpoint and only
+    SINGLE-VALUE includeChildren forms (one of cameras OR cameraGroups, not
+    both comma-joined). Earlier versions of this fetcher sent both, which
+    on strict installs would 400; on permissive ones it succeeded but
+    the unknown size= param was silently dropped.
+
+    Strategy here:
+      1. GET /cameraGroups (flat list of every group, ignoring hierarchy).
+      2. For each group, GET /cameraGroups/{id}/cameras to enumerate its
+         camera members. This is the only spec-blessed way to map cameras
+         to groups; the per-group ?includeChildren=cameras form is also
+         valid but identical in cost.
+      3. We do NOT separately fetch /cameraGroups/{id}/cameraGroups —
+         the flat top-level list already contains every group regardless
+         of nesting depth, and our flattener preserves parent linkage via
+         the path-walking model.
+
+    Older releases shipped before the spec used /deviceGroups or /groups;
+    if /cameraGroups 404s we fall back to those names so this works
+    cross-version.
+
+    Returns (records, endpoint_name) for diagnostics.
     """
     headers = {
         "Authorization": f"Bearer {token}",
@@ -178,103 +197,96 @@ def fetch_camera_groups(
         except urllib.error.URLError as e:
             return (0, None, repr(e)[:200])
 
-    # Group records can land under different envelope keys. Try them all.
     def _unpack(payload: dict | None) -> list[dict]:
+        """Per spec the envelope is {"array": [...]}, but pre-spec
+        installs used {"data": [...]} so we accept both."""
         if not isinstance(payload, dict):
             return []
-        for key in ("array", "data", "items", "result", "groups"):
+        for key in ("array", "data"):
             v = payload.get(key)
             if isinstance(v, list):
                 return v
-            if isinstance(v, dict):
-                # Some installs nest the array under data.array
-                inner = v.get("array") or v.get("items")
-                if isinstance(inner, list):
-                    return inner
-        # Last resort: if the whole payload looks like a single group
-        # (has 'id' + 'name'), wrap it in a list.
-        if "id" in payload and ("name" in payload or "displayName" in payload):
-            return [payload]
         return []
 
-    # Endpoint × includeChildren-shape combinations to try. The
-    # _children=None entry strips the param entirely; useful for
-    # installs that don't accept includeChildren at all.
-    if include_cameras:
-        children_shapes = ["cameras,cameraGroups", "cameras", None]
-    else:
-        children_shapes = ["cameraGroups", None]
-    endpoints = ["cameraGroups", "deviceGroups", "groups"]
-
+    # Step 1: find the right endpoint name. Try the spec name first.
+    endpoints_to_try = ["cameraGroups", "deviceGroups", "groups"]
+    chosen_endpoint = None
+    groups: list[dict] = []
     last_status = None
     last_body   = ""
-    for endpoint in endpoints:
-        for children in children_shapes:
-            params = ["page=0", "size=10000"]
-            if children:
-                params.append(f"includeChildren={children}")
-            url = f"{base}{api_base}/{endpoint}?" + "&".join(params)
-            _log(f"trying {url}")
-            status, payload, body = _get(url)
-            _log(f"  -> HTTP {status}; body[:200]={body!r}")
-            last_status, last_body = status, body
-            if status == 200 and payload is not None:
-                arr = _unpack(payload)
-                _log(f"  -> unpacked {len(arr)} record(s) from {endpoint}")
-                if arr:
-                    print(f"[groups] success: {endpoint} "
-                          f"({len(arr)} record{'s' if len(arr) != 1 else ''})",
-                          file=sys.stderr)
-                    # If the endpoint succeeded but children weren't
-                    # asked for / weren't returned, fan out per-group
-                    # to pick them up so cameraIds are populated.
-                    if include_cameras and not _any_has_cameras(arr):
-                        _log("  -> no inline cameras; fanning out per group")
-                        for g in arr:
-                            gid = g.get("id")
-                            if not gid:
-                                continue
-                            detail_url = (
-                                f"{base}{api_base}/{endpoint}/{gid}"
-                                f"?includeChildren=cameras"
-                            )
-                            st, pl, _ = _get(detail_url)
-                            if st == 200 and isinstance(pl, dict):
-                                # Drill past 'data' envelope if present.
-                                detail = (pl.get("data")
-                                          if isinstance(pl.get("data"), dict)
-                                          else pl)
-                                # Cameras can live under several shapes.
-                                cams = (detail.get("cameras")
-                                        or (detail.get("children", {}) or {}).get("cameras")
-                                        or [])
-                                if isinstance(cams, list) and cams:
-                                    g["cameras"] = cams
-                    return arr, endpoint
-
-    raise RuntimeError(
-        f"no groups endpoint found "
-        f"(last HTTP {last_status}, last body: {last_body!r}). "
-        f"Run with --debug to see every URL tried; you may need "
-        f"to point --api-base at a different prefix or upgrade your "
-        f"XProtect REST API."
-    )
-
-
-def _any_has_cameras(records: list[dict]) -> bool:
-    """True if any record in the list looks like it carries child cameras."""
-    for r in records or []:
-        if not isinstance(r, dict):
+    for endpoint in endpoints_to_try:
+        url = f"{base}{api_base}/{endpoint}"
+        _log(f"GET {url}  (looking for endpoint)")
+        status, payload, body = _get(url)
+        _log(f"  -> HTTP {status}; body[:200]={body!r}")
+        last_status, last_body = status, body
+        if status == 404:
             continue
-        v = r.get("cameras")
-        if isinstance(v, list) and v:
-            return True
-        children = r.get("children")
-        if isinstance(children, dict):
-            v = children.get("cameras")
-            if isinstance(v, list) and v:
-                return True
-    return False
+        if status == 200 and payload is not None:
+            arr = _unpack(payload)
+            chosen_endpoint = endpoint
+            groups = arr
+            _log(f"  -> endpoint found: /{endpoint} returned {len(arr)} group(s)")
+            break
+        # Any other status — let the caller see the message.
+        raise RuntimeError(
+            f"/{endpoint} returned HTTP {status}: {body!r}"
+        )
+
+    if chosen_endpoint is None:
+        raise RuntimeError(
+            f"no groups endpoint found on this install. Tried "
+            f"{', '.join('/' + e for e in endpoints_to_try)} — all 404. "
+            f"Last HTTP {last_status}, body: {last_body!r}. "
+            f"Check --api-base (currently {api_base}) or your XProtect "
+            f"REST API version."
+        )
+
+    # Step 2: per-group camera enumeration. Spec endpoint is
+    # /cameraGroups/{id}/cameras. Empty group list is a totally legal
+    # operational state (the install just hasn't created any groups
+    # yet) so we don't error here — return early with the empty list
+    # and the caller will surface a clear diagnostic.
+    if not groups:
+        print(f"[groups] /{chosen_endpoint} returned an EMPTY array — "
+              f"this XProtect install has no camera groups configured. "
+              f"Create groups in Management Client > Devices > Groups, "
+              f"or in Smart Client's device tree.",
+              file=sys.stderr)
+        return groups, chosen_endpoint
+
+    if include_cameras:
+        _log(f"  -> enumerating cameras for {len(groups)} group(s) "
+             f"via /{chosen_endpoint}/{{id}}/cameras")
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        def _fetch_group_cameras(gid: str) -> list[dict]:
+            url = f"{base}{api_base}/{chosen_endpoint}/{gid}/cameras"
+            status, payload, body = _get(url)
+            if status != 200 or payload is None:
+                _log(f"  -> {gid}: HTTP {status} {body!r}")
+                return []
+            return _unpack(payload)
+
+        # Bounded parallelism — same heuristic as the cameras fetcher's
+        # MAC enrichment, capped at 16 to keep API Gateway load sane.
+        workers = max(1, min(len(groups), 16))
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {
+                pool.submit(_fetch_group_cameras, g["id"]): g
+                for g in groups if isinstance(g, dict) and g.get("id")
+            }
+            for fut in as_completed(futures):
+                g = futures[fut]
+                try:
+                    cams = fut.result()
+                except Exception as exc:  # noqa: BLE001
+                    _log(f"  -> {g.get('id')}: fetch failed: {exc!r}")
+                    cams = []
+                # Stash on the group record so flatten_groups picks it up.
+                g["cameras"] = cams
+
+    return groups, chosen_endpoint
 
 
 # ---------------------------------------------------------------------------
@@ -484,11 +496,21 @@ def main() -> int:
 
     # Diagnostic top-level fields (same __-prefix convention as
     # cameras_state.py so they can never collide with a group GUID).
+    diagnostic = ""
+    if len(keyed) == 0:
+        diagnostic = (
+            "No camera groups configured in this XProtect install. "
+            "Create groups in Management Client > Devices > Groups "
+            "(or Smart Client > Setup > device tree). Until at least one "
+            "group exists, the surveillance dashboard's Sites tab will "
+            "fall back to host-as-site bucketing."
+        )
     out = {
         "__count": len(keyed),
         "__fetched_at": dt.datetime.now(dt.timezone.utc)
                           .strftime("%Y-%m-%dT%H:%M:%SZ"),
         "__endpoint": endpoint_used,
+        "__diagnostic": diagnostic,
         "__root_count": len(groups_raw),
         "__total_cameras": sum(r["cameraCount"] for r in flat),
         "__total_hardware": sum(r["hardwareCount"] for r in flat),
