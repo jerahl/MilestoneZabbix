@@ -300,21 +300,44 @@ def fetch_camera_groups(
         include_cameras = False
 
     if include_cameras:
-        _log(f"  -> enumerating cameras for {len(groups)} group(s) "
-             f"via /{chosen_endpoint}/{{id}}/cameras")
+        _log(f"  -> enumerating cameras for {len(groups)} group(s)")
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
-        def _fetch_group_cameras(gid: str) -> list[dict]:
-            url = f"{base}{api_base}/{chosen_endpoint}/{gid}/cameras"
-            status, payload, body = _get(url)
-            if status != 200 or payload is None:
-                _log(f"  -> {gid}: HTTP {status} {body!r}")
-                return []
-            return _unpack(payload)
+        # Two equally-valid spec paths to a group's cameras. Some
+        # XProtect roles grant Read on one but not the other — try the
+        # subresource form first (faster, returns a flat array), then
+        # fall back to the single-resource GET with includeChildren on
+        # 403. Returns (cameras_list, http_status) so the caller can
+        # tally 403s for a consolidated permission hint.
+        def _fetch_group_cameras(gid: str) -> tuple[list[dict], int]:
+            url1 = f"{base}{api_base}/{chosen_endpoint}/{gid}/cameras"
+            status, payload, body = _get(url1)
+            if status == 200 and payload is not None:
+                return _unpack(payload), 200
+            if status == 403:
+                # Try the include-children form on the single-resource GET.
+                url2 = (f"{base}{api_base}/{chosen_endpoint}/{gid}"
+                        f"?includeChildren=cameras")
+                status2, payload2, body2 = _get(url2)
+                if status2 == 200 and isinstance(payload2, dict):
+                    detail = (payload2.get("data")
+                              if isinstance(payload2.get("data"), dict)
+                              else payload2)
+                    cams = detail.get("cameras")
+                    if isinstance(cams, list):
+                        return cams, 200
+                    return [], 200  # endpoint OK, just no cameras
+                _log(f"  -> {gid}: subresource 403; "
+                     f"includeChildren also failed (HTTP {status2})")
+                return [], 403
+            _log(f"  -> {gid}: HTTP {status} {body!r}")
+            return [], status
 
-        # Bounded parallelism — same heuristic as the cameras fetcher's
-        # MAC enrichment, capped at 16 to keep API Gateway load sane.
+        # Bounded parallelism — same heuristic as cameras_state.py's MAC
+        # enrichment, capped at 16 to keep API Gateway load sane.
         workers = max(1, min(len(groups), 16))
+        forbidden = 0
+        total = 0
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = {
                 pool.submit(_fetch_group_cameras, g["id"]): g
@@ -322,13 +345,32 @@ def fetch_camera_groups(
             }
             for fut in as_completed(futures):
                 g = futures[fut]
+                total += 1
                 try:
-                    cams = fut.result()
+                    cams, st = fut.result()
                 except Exception as exc:  # noqa: BLE001
                     _log(f"  -> {g.get('id')}: fetch failed: {exc!r}")
-                    cams = []
+                    cams, st = [], 0
+                if st == 403:
+                    forbidden += 1
                 # Stash on the group record so flatten_groups picks it up.
                 g["cameras"] = cams
+
+        if forbidden:
+            # Consolidated permission hint — one message instead of
+            # per-group spam. Points at the exact Mgmt Client surface.
+            print(
+                f"[groups] PERMISSION: {forbidden}/{total} groups returned "
+                f"HTTP 403 on /{chosen_endpoint}/<id>/cameras. The role "
+                f"used by {{$MILESTONE.USER}} needs read access to camera "
+                f"group membership. In XProtect Management Client: "
+                f"Security > Roles > [your role] > Devices > Camera > "
+                f"select each group (or 'All cameras' at the root) and "
+                f"check 'Read' under Overall security. Affected groups "
+                f"will have cameraCount=0 in the snapshot until this "
+                f"is granted.",
+                file=sys.stderr,
+            )
 
     return groups, chosen_endpoint
 
