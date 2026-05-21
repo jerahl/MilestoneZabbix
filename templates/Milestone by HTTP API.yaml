@@ -450,7 +450,7 @@ zabbix_export:
                     (max(last_foreach(/*/icmpping?[tag="cam_id:{#CAM.ID}"]))=0)*2
                     + (length(last(//milestone.cam.ess.comm.type[{#CAM.ID}]))>0
                        and last(//milestone.cam.ess.comm.type[{#CAM.ID}])<>"{$MILESTONE.ESS.TYPE.COMMUNICATION_OK}")*1
-                    + (last(/*/zabbix[host,snmp,available]?[tag="cam_id:{#CAM.ID}"])=0)*4
+                    + (max(last_foreach(/*/zabbix[host,snmp,available]?[tag="cam_id:{#CAM.ID}"]))=0)*4
                   )
               description: |
                 Same combined health score as 'Status (combined)', except
@@ -812,7 +812,7 @@ zabbix_export:
                     (max(last_foreach(/*/icmpping?[tag="cam_id:{#CAM.ID}"]))=0)*2
                     + (length(last(//milestone.cam.ess.comm.type[{#CAM.ID}]))>0
                        and last(//milestone.cam.ess.comm.type[{#CAM.ID}])<>"{$MILESTONE.ESS.TYPE.COMMUNICATION_OK}")*1
-                    + (last(/*/zabbix[host,snmp,available]?[tag="cam_id:{#CAM.ID}"])=0)*4
+                    + (max(last_foreach(/*/zabbix[host,snmp,available]?[tag="cam_id:{#CAM.ID}"]))=0)*4
                   )
               description: |
                 Combined health score for honeycomb display, folding
