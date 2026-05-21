@@ -137,65 +137,144 @@ def get_token(base: str, idp_path: str, user: str, password: str,
 def fetch_camera_groups(
     base: str, token: str, ctx: ssl.SSLContext | None,
     timeout: float, api_base: str, page_size: int,
-    include_cameras: bool,
-) -> list[dict]:
-    """Page through /cameraGroups and return the raw records.
+    include_cameras: bool, debug: bool = False,
+) -> tuple[list[dict], str]:
+    """Find the groups endpoint and return (records, endpoint_name).
 
-    Mirrors the fast-then-paginate strategy in cameras_state.py: one
-    oversize page first, fall back to proper pagination on 4xx.
+    XProtect's REST surface has shifted the groups path across versions:
+        /api/rest/v1/cameraGroups      — older / Smart Client native
+        /api/rest/v1/deviceGroups      — newer canonical name
+        /api/rest/v1/groups            — legacy fallback
+
+    Some installs only expose one of the three; we probe each in turn,
+    try with includeChildren first, then without, then strip the param
+    entirely. Whichever returns a non-empty array wins.
+
+    Returns the raw records plus the endpoint name that succeeded so
+    operators can see which path their install uses (logged to stderr).
     """
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json",
     }
-    children = "cameras,cameraGroups" if include_cameras else "cameraGroups"
 
-    def _try_fast() -> list[dict] | None:
-        url = (
-            f"{base}{api_base}/cameraGroups"
-            f"?includeChildren={children}&page=0&size=10000"
-        )
+    def _log(msg: str) -> None:
+        if debug:
+            print(f"[groups] {msg}", file=sys.stderr)
+
+    def _get(url: str) -> tuple[int, dict | None, str]:
+        """GET url. Returns (status, parsed_json, raw_body_snippet)."""
         try:
             req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, context=ctx, timeout=timeout) as r:
-                payload = json.loads(r.read().decode())
-            arr = payload.get("array") or payload.get("data") or []
-            return arr if isinstance(arr, list) else []
+                raw = r.read().decode()
+            try:
+                return (r.status, json.loads(raw), raw[:200])
+            except json.JSONDecodeError:
+                return (r.status, None, raw[:200])
         except urllib.error.HTTPError as e:
-            if e.code in (400, 404, 413, 414):
-                return None
-            body = e.read().decode(errors="replace")[:500]
-            raise RuntimeError(f"cameraGroups HTTP {e.code}: {body}") from None
+            body = e.read().decode(errors="replace")[:200]
+            return (e.code, None, body)
+        except urllib.error.URLError as e:
+            return (0, None, repr(e)[:200])
 
-    arr = _try_fast()
-    if arr is not None:
-        return arr
+    # Group records can land under different envelope keys. Try them all.
+    def _unpack(payload: dict | None) -> list[dict]:
+        if not isinstance(payload, dict):
+            return []
+        for key in ("array", "data", "items", "result", "groups"):
+            v = payload.get(key)
+            if isinstance(v, list):
+                return v
+            if isinstance(v, dict):
+                # Some installs nest the array under data.array
+                inner = v.get("array") or v.get("items")
+                if isinstance(inner, list):
+                    return inner
+        # Last resort: if the whole payload looks like a single group
+        # (has 'id' + 'name'), wrap it in a list.
+        if "id" in payload and ("name" in payload or "displayName" in payload):
+            return [payload]
+        return []
 
-    out: list[dict] = []
-    page = 0
-    while True:
-        url = (
-            f"{base}{api_base}/cameraGroups"
-            f"?includeChildren={children}&page={page}&size={page_size}"
-        )
-        req = urllib.request.Request(url, headers=headers)
-        try:
-            with urllib.request.urlopen(req, context=ctx,
-                                         timeout=timeout) as r:
-                payload = json.loads(r.read().decode())
-        except urllib.error.HTTPError as e:
-            body = e.read().decode(errors="replace")[:500]
-            raise RuntimeError(
-                f"cameraGroups HTTP {e.code} on page {page}: {body}"
-            ) from None
-        arr_p = payload.get("array") or payload.get("data") or []
-        if not arr_p:
-            break
-        out.extend(arr_p)
-        if len(arr_p) < page_size:
-            break
-        page += 1
-    return out
+    # Endpoint × includeChildren-shape combinations to try. The
+    # _children=None entry strips the param entirely; useful for
+    # installs that don't accept includeChildren at all.
+    if include_cameras:
+        children_shapes = ["cameras,cameraGroups", "cameras", None]
+    else:
+        children_shapes = ["cameraGroups", None]
+    endpoints = ["cameraGroups", "deviceGroups", "groups"]
+
+    last_status = None
+    last_body   = ""
+    for endpoint in endpoints:
+        for children in children_shapes:
+            params = ["page=0", "size=10000"]
+            if children:
+                params.append(f"includeChildren={children}")
+            url = f"{base}{api_base}/{endpoint}?" + "&".join(params)
+            _log(f"trying {url}")
+            status, payload, body = _get(url)
+            _log(f"  -> HTTP {status}; body[:200]={body!r}")
+            last_status, last_body = status, body
+            if status == 200 and payload is not None:
+                arr = _unpack(payload)
+                _log(f"  -> unpacked {len(arr)} record(s) from {endpoint}")
+                if arr:
+                    print(f"[groups] success: {endpoint} "
+                          f"({len(arr)} record{'s' if len(arr) != 1 else ''})",
+                          file=sys.stderr)
+                    # If the endpoint succeeded but children weren't
+                    # asked for / weren't returned, fan out per-group
+                    # to pick them up so cameraIds are populated.
+                    if include_cameras and not _any_has_cameras(arr):
+                        _log("  -> no inline cameras; fanning out per group")
+                        for g in arr:
+                            gid = g.get("id")
+                            if not gid:
+                                continue
+                            detail_url = (
+                                f"{base}{api_base}/{endpoint}/{gid}"
+                                f"?includeChildren=cameras"
+                            )
+                            st, pl, _ = _get(detail_url)
+                            if st == 200 and isinstance(pl, dict):
+                                # Drill past 'data' envelope if present.
+                                detail = (pl.get("data")
+                                          if isinstance(pl.get("data"), dict)
+                                          else pl)
+                                # Cameras can live under several shapes.
+                                cams = (detail.get("cameras")
+                                        or (detail.get("children", {}) or {}).get("cameras")
+                                        or [])
+                                if isinstance(cams, list) and cams:
+                                    g["cameras"] = cams
+                    return arr, endpoint
+
+    raise RuntimeError(
+        f"no groups endpoint found "
+        f"(last HTTP {last_status}, last body: {last_body!r}). "
+        f"Run with --debug to see every URL tried; you may need "
+        f"to point --api-base at a different prefix or upgrade your "
+        f"XProtect REST API."
+    )
+
+
+def _any_has_cameras(records: list[dict]) -> bool:
+    """True if any record in the list looks like it carries child cameras."""
+    for r in records or []:
+        if not isinstance(r, dict):
+            continue
+        v = r.get("cameras")
+        if isinstance(v, list) and v:
+            return True
+        children = r.get("children")
+        if isinstance(children, dict):
+            v = children.get("cameras")
+            if isinstance(v, list) and v:
+                return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -333,6 +412,13 @@ def main() -> int:
                     help="Skip camera enumeration per group. Groups "
                          "still get a row with cameraCount=0; useful "
                          "for diagnosing just the group tree shape.")
+    ap.add_argument("--debug", action="store_true",
+                    help="Log every endpoint URL tried, the HTTP "
+                         "status, and the first 200 bytes of the "
+                         "response body to stderr. Use this to "
+                         "figure out which groups endpoint your "
+                         "XProtect version exposes when the snapshot "
+                         "comes back empty.")
     args = ap.parse_args()
 
     base = f"{args.scheme}://{args.host}"
@@ -366,11 +452,13 @@ def main() -> int:
         return 4
 
     # Step 2: camera groups.
+    endpoint_used = ""
     try:
-        groups_raw = fetch_camera_groups(
+        groups_raw, endpoint_used = fetch_camera_groups(
             base, token, ctx, args.timeout,
             args.api_base, args.page_size,
             include_cameras=not args.no_cameras,
+            debug=args.debug,
         )
     except RuntimeError as e:
         print(json.dumps({"error": "api_error", "detail": str(e)}),
@@ -400,6 +488,7 @@ def main() -> int:
         "__count": len(keyed),
         "__fetched_at": dt.datetime.now(dt.timezone.utc)
                           .strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "__endpoint": endpoint_used,
         "__root_count": len(groups_raw),
         "__total_cameras": sum(r["cameraCount"] for r in flat),
         "__total_hardware": sum(r["hardwareCount"] for r in flat),
