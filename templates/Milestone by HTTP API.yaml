@@ -450,11 +450,12 @@ zabbix_export:
                     (max(last_foreach(/*/icmpping?[tag="cam_id:{#CAM.ID}"]))=0)*2
                     + (length(last(//milestone.cam.ess.comm.type[{#CAM.ID}]))>0
                        and last(//milestone.cam.ess.comm.type[{#CAM.ID}])<>"{$MILESTONE.ESS.TYPE.COMMUNICATION_OK}")*1
+                    + (last(/*/zabbix[host,snmp,available]?[tag="cam_id:{#CAM.ID}"])=0)*4
                   )
               description: |
                 Same combined health score as 'Status (combined)', except
                 values 0 (OK) and -1 (disabled) are discarded in
-                preprocessing — only fault-state values (1, 2, 3) are
+                preprocessing — only fault-state values (1..7) are
                 ever recorded. Drives the dashboard Honeycomb so it
                 shows zero cells when everything is healthy.
               valuemap:
@@ -811,15 +812,34 @@ zabbix_export:
                     (max(last_foreach(/*/icmpping?[tag="cam_id:{#CAM.ID}"]))=0)*2
                     + (length(last(//milestone.cam.ess.comm.type[{#CAM.ID}]))>0
                        and last(//milestone.cam.ess.comm.type[{#CAM.ID}])<>"{$MILESTONE.ESS.TYPE.COMMUNICATION_OK}")*1
+                    + (last(/*/zabbix[host,snmp,available]?[tag="cam_id:{#CAM.ID}"])=0)*4
                   )
               description: |
-                Combined health score for honeycomb display. See item
-                prototype comments in the template for value meaning.
-                ICMP is sourced from the per-camera Zabbix host via the
-                cam_id tag (G4 + G23): the host_prototype stamps
-                cam_id={#CAM.ID} on every per-camera host, so its icmpping
-                item carries the tag by inheritance; last_foreach matches
-                across hosts by that tag and max() wraps for scalar use.
+                Combined health score for honeycomb display, folding
+                three independent signals into one value:
+
+                  bit 0 (+1)  ESS communication state != OK GUID
+                  bit 1 (+2)  ICMP unreachable
+                  bit 2 (+4)  SNMP availability = 0 (down)
+
+                Values:
+                  -1  Disabled in XProtect
+                   0  OK (all three signals OK)
+                   1  ESS comm fault only
+                   2  ICMP unreachable, ESS still OK
+                   3  Offline (ICMP + ESS)
+                   4  SNMP fault only (ping + ESS OK)
+                   5  SNMP + ESS fault
+                   6  SNMP + ICMP fault
+                   7  Offline (all three down)
+
+                Cross-host items are looked up via the cam_id tag the
+                host_prototype stamps on every per-camera Zabbix host
+                (G4 + G23). last() with the ?[tag="..."] selector
+                returns the value from the single matching host;
+                zabbix[host,snmp,available] there reports 0 (down),
+                1 (up), or 2 (unknown — no SNMP items configured, no
+                penalty applied).
               valuemap:
                 name: 'Camera status'
               tags:
@@ -1439,11 +1459,19 @@ zabbix_export:
             - value: '0'
               newvalue: OK
             - value: '1'
-              newvalue: 'ESS comm fault (ping OK)'
+              newvalue: 'ESS comm fault'
             - value: '2'
-              newvalue: 'Ping down (ESS still OK)'
+              newvalue: 'Ping down'
             - value: '3'
               newvalue: 'Offline (ping + ESS)'
+            - value: '4'
+              newvalue: 'SNMP fault'
+            - value: '5'
+              newvalue: 'SNMP + ESS fault'
+            - value: '6'
+              newvalue: 'SNMP + Ping fault'
+            - value: '7'
+              newvalue: 'Offline (all three)'
         - uuid: 6e0a21b3c8e64f24b1fdb6054f1ea8d2
           name: 'Service state'
           mappings:

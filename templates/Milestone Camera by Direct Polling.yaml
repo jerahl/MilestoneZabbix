@@ -90,6 +90,29 @@ zabbix_export:
                 not the operator-facing alarm. The Combined status calc
                 on the parent Site host folds this + enabled + ESS state
                 into the actual offline alert.
+        - uuid: e9b1c3a25f8f4f37bc4e9d0612a8f5e1
+          name: 'Cam: SNMP availability'
+          type: INTERNAL
+          key: 'zabbix[host,snmp,available]'
+          delay: 1m
+          description: |
+            Zabbix-internal SNMP-interface availability for this camera.
+            Returns 0 (not available), 1 (available), or 2 (unknown —
+            no SNMP items configured / not yet polled).
+
+            Used by the parent Site host's combined-status calc as the
+            third signal (alongside Milestone enabled/ESS and ICMP).
+            Cameras whose linked vendor template doesn't define any
+            SNMP items will stay at 2 forever, which the combined-
+            status calc treats as "not penalised" — only an explicit
+            0 contributes to the SNMP-fault bit.
+          valuemap:
+            name: 'zabbix.host.available'
+          tags:
+            - tag: component
+              value: camera-snmp
+            - tag: src
+              value: zbx
       macros:
         - macro: '{$MS.CAM.PING.INTERVAL}'
           value: 1m
@@ -102,3 +125,12 @@ zabbix_export:
               newvalue: Down
             - value: '1'
               newvalue: Up
+        - uuid: 4c1f7b9d3a2e4d68a17e8c4b9d2f6a5e
+          name: 'zabbix.host.available'
+          mappings:
+            - value: '0'
+              newvalue: 'not available'
+            - value: '1'
+              newvalue: available
+            - value: '2'
+              newvalue: unknown
