@@ -769,6 +769,36 @@ zabbix_export:
                   value: '{#CAM.NAME}'
                 - tag: component
                   value: camera
+            - uuid: 6b3d1c9a8f4242b39e0a8e0fcf317e22
+              name: 'Cam [{#CAM.NAME}]: Recording server id'
+              type: DEPENDENT
+              key: 'milestone.cam.rsid[{#CAM.ID}]'
+              value_type: CHAR
+              description: |
+                Recording-server GUID this camera lives on (the
+                grandparent of the camera in the XProtect tree:
+                ManagementServer > RecordingServer > Hardware >
+                Camera). Stamped by milestone_cameras_state.py from
+                hw.relations.parent.id. Empty if the API version
+                doesn't expose it.
+
+                Used by the surveillance dashboard's Sites tab to
+                attribute camera groups to their hosting recording
+                server (group → cameras → RS).
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.recordingServerId
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 1h
+              master_item:
+                key: 'milestone.cam.raw[{#CAM.ID}]'
+              tags:
+                - tag: camera
+                  value: '{#CAM.NAME}'
+                - tag: component
+                  value: camera
             - uuid: 9ece2ec4ba874c549d87dcd5af519e52
               name: 'Cam [{#CAM.NAME}]: Status (combined)'
               type: CALCULATED

@@ -572,16 +572,41 @@ def enrich_hardware_with_settings(
 # ---------------------------------------------------------------------------
 # Flatten hardware -> cameras
 # ---------------------------------------------------------------------------
+def _hw_recording_server_id(hw: dict) -> str:
+    """Extract the recording-server GUID from a hardware record's relations.
+
+    XProtect hierarchy: ManagementServer > RecordingServer > Hardware >
+    Camera. The hardware record's parent IS its recording server, so
+    hw.relations.parent.id gives us the RS GUID directly. Tolerate
+    older shapes where it might be flat (hw.recordingServerId).
+    """
+    if not isinstance(hw, dict):
+        return ""
+    rel = hw.get("relations") or {}
+    if isinstance(rel, dict):
+        parent = rel.get("parent")
+        if isinstance(parent, dict):
+            pid = parent.get("id")
+            if pid:
+                return str(pid)
+    # Legacy flat shape, occasionally seen on older API releases.
+    flat = hw.get("recordingServerId") or hw.get("parentId")
+    return str(flat) if flat else ""
+
+
 def flatten_cameras(hw_list: list[dict]) -> list[dict]:
     """Walk hardware -> child cameras, injecting hardware fields per camera.
 
     Injected per camera:
-        address       — bare host (URL/port stripped) for ICMP
-        mac           — normalized MAC, "AA:BB:CC:DD:EE:FF" or ""
-        macRaw        — the value as Milestone returned it (for debugging)
-        hardwareId    — parent hardware GUID
-        hardwareName  — parent hardware display name
-        hardwareModel — parent hardware model string
+        address           — bare host (URL/port stripped) for ICMP
+        mac               — normalized MAC, "AA:BB:CC:DD:EE:FF" or ""
+        macRaw            — the value as Milestone returned it (debug)
+        hardwareId        — parent hardware GUID
+        hardwareName      — parent hardware display name
+        hardwareModel     — parent hardware model string
+        recordingServerId — grandparent recording-server GUID (from
+                            hw.relations.parent.id). Empty if the API
+                            version doesn't expose it.
     """
     cameras: list[dict] = []
     for hw in hw_list or []:
@@ -618,6 +643,8 @@ def flatten_cameras(hw_list: list[dict]) -> list[dict]:
         mac_raw = _find_mac(settings_dict)
         mac = mac_norm(mac_raw)
 
+        rs_id = _hw_recording_server_id(hw)
+
         for cam in kids:
             if not isinstance(cam, dict):
                 continue
@@ -631,6 +658,7 @@ def flatten_cameras(hw_list: list[dict]) -> list[dict]:
                 hw.get("name") or hw.get("displayName") or ""
             )
             cam["hardwareModel"] = hw.get("model") or ""
+            cam["recordingServerId"] = rs_id
             cameras.append(cam)
     return cameras
 
