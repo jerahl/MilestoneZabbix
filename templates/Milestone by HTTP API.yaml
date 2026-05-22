@@ -3,6 +3,9 @@ zabbix_export:
   template_groups:
     - uuid: ae594436d5584d85b34ddfa0b0e53a51
       name: Templates/Video
+  host_groups:
+    - uuid: 99310a006c1d46b780561689af7af80e
+      name: 'Discovered hosts/Milestone Cameras'
   templates:
     - uuid: 26b1f4278c4744049d0c9c6d1289d29e
       template: 'Milestone XProtect by HTTP'
@@ -35,21 +38,28 @@ zabbix_export:
         - {$MILESTONE.CLIENT_ID} — OAuth client id (default GrantValidatorClient)
         
         External helper scripts (deploy on the Zabbix server/proxy):
-        
+
           /usr/lib/zabbix/externalscripts/
               milestone_cameras_read.sh         <- called by Zabbix item
               milestone_cameras_refresh.sh      <- called by cron
               milestone_cameras_state.py        <- the actual REST fetcher
+              milestone_groups_read.sh          <- called by Zabbix item
+              milestone_groups_refresh.sh       <- called by cron
+              milestone_groups_state.py         <- the actual REST fetcher
               milestone_ess_read.sh             <- called by Zabbix item
               milestone_ess_refresh.sh          <- called by cron
               milestone_ess_state.py            <- the actual ESS fetcher
-        
+
         Required cron entries (as the zabbix user):
-        
+
           # Cameras + parent-hardware metadata: every 15 min
           */15 * * * * /usr/lib/zabbix/externalscripts/milestone_cameras_refresh.sh \
               {$MILESTONE.HOST} {$MILESTONE.USER} 'PASSWORD' --scheme https
-        
+
+          # Camera groups (Sites axis): every 15 min — groups change rarely
+          */15 * * * * /usr/lib/zabbix/externalscripts/milestone_groups_refresh.sh \
+              {$MILESTONE.HOST} {$MILESTONE.USER} 'PASSWORD' --scheme https
+
           # ESS state snapshot: once a day (it takes 1-2 min at 2500 cameras)
           15 3 * * * /usr/lib/zabbix/externalscripts/milestone_ess_refresh.sh \
               {$MILESTONE.HOST} {$MILESTONE.USER} 'PASSWORD' --scheme https
@@ -311,6 +321,41 @@ zabbix_export:
           tags:
             - tag: component
               value: camera
+        - uuid: 1f9b3d5cf2914aebaa11a2b6cf57e9d6
+          name: 'Milestone: Get all camera groups (batch master)'
+          type: EXTERNAL
+          key: 'milestone_groups_read.sh[3600]'
+          delay: 15m
+          history: '0'
+          value_type: TEXT
+          description: |
+            Reads the JSON snapshot written by milestone_groups_refresh.sh
+            (run from cron). Shape matches the cameras snapshot — every
+            group GUID is a top-level key for O(1) JSONPath lookup by
+            dependent items, and a flat $.__array list is included for
+            the Group LLD rule below.
+
+            Groups (a.k.a. cameraGroups in the REST API) are the logical
+            folders Smart Client shows in the device tree. Per Plan
+            v1.3 they're the canonical "site" axis for the TCS
+            Surveillance dashboard, replacing the older "every Zabbix
+            host = one site" model.
+
+            See /usr/lib/zabbix/externalscripts/milestone_groups_state.py.
+          tags:
+            - tag: component
+              value: group
+          triggers:
+            - uuid: 7a2b4c8d61ee403b89e3d6c1f4a55792
+              expression: 'find(/Milestone XProtect by HTTP/milestone_groups_read.sh[3600],,"regexp","\"error\":\"(stale|no_snapshot)\"")=1'
+              name: 'Milestone [{HOST.NAME}]: groups snapshot stale or missing'
+              priority: WARNING
+              description: |
+                milestone_groups_refresh.sh has not produced a fresh
+                snapshot in the last hour. The dashboard's Sites tab
+                will fall back to host-as-site bucketing until this is
+                resolved. Check /var/log/zabbix/milestone_groups_state.log
+                on the Zabbix server/proxy.
         - uuid: 0c36cd75bd4944299009e53c05e5e7c9
           name: 'Milestone: ESS live camera state snapshot'
           type: EXTERNAL
@@ -365,46 +410,12 @@ zabbix_export:
                 operator: NOT_MATCHES_REGEX
           lifetime: 1d
           item_prototypes:
-            - uuid: a7a86292dbf74edf87208a02c33530ce
-              name: 'Cam [{#CAM.NAME}]: ICMP packet loss'
-              type: SIMPLE
-              key: 'icmppingloss[{#CAM.ADDRESS}]'
-              delay: '{$MILESTONE.CAM.PING.INTERVAL}'
-              units: '%'
-              description: 'ICMP packet loss percentage to this camera.'
-              tags:
-                - tag: camera
-                  value: '{#CAM.NAME}'
-                - tag: component
-                  value: camera-ping
-            - uuid: 608056a772a3402a93fef761d0aa1a96
-              name: 'Cam [{#CAM.NAME}]: ICMP round-trip avg'
-              type: SIMPLE
-              key: 'icmppingsec[{#CAM.ADDRESS}]'
-              delay: '{$MILESTONE.CAM.PING.INTERVAL}'
-              value_type: FLOAT
-              units: s
-              description: 'Average ICMP round-trip time to this camera.'
-              tags:
-                - tag: camera
-                  value: '{#CAM.NAME}'
-                - tag: component
-                  value: camera-ping
-            - uuid: 5ec1311cc0544ad7a6516a4634b298ae
-              name: 'Cam [{#CAM.NAME}]: ICMP ping'
-              type: SIMPLE
-              key: 'icmpping[{#CAM.ADDRESS}]'
-              delay: '{$MILESTONE.CAM.PING.INTERVAL}'
-              description: |
-                Basic ICMP reachability check sent directly to the camera's
-                network address as reported by the Milestone REST API.
-              valuemap:
-                name: 'Service state'
-              tags:
-                - tag: camera
-                  value: '{#CAM.NAME}'
-                - tag: component
-                  value: camera-ping
+            # ICMP item prototypes MOVED to the per-camera host template
+            # 'Milestone Camera by Direct Polling' (per Plan v1.2 §A.5).
+            # The host_prototype at the bottom of this LLD creates one
+            # Zabbix host per discovered camera (deduped by HW.ID per G2)
+            # and links the per-camera template. ICMP polling happens
+            # there, not at Site scope.
             - uuid: 9c4e1a82bf4b4e5b8d0a16e3f47c5928
               name: 'Cam [{#CAM.NAME}]: IP address'
               type: DEPENDENT
@@ -436,14 +447,15 @@ zabbix_export:
               params: |
                 (last(//milestone.cam.enabled[{#CAM.ID}])="false")*-1
                 + (last(//milestone.cam.enabled[{#CAM.ID}])="true")*(
-                    (last(//icmpping[{#CAM.ADDRESS}])=0)*2
+                    (max(last_foreach(/*/icmpping?[tag="cam_id:{#CAM.ID}"]))=0)*2
                     + (length(last(//milestone.cam.ess.comm.type[{#CAM.ID}]))>0
                        and last(//milestone.cam.ess.comm.type[{#CAM.ID}])<>"{$MILESTONE.ESS.TYPE.COMMUNICATION_OK}")*1
+                    + (max(last_foreach(/*/zabbix[host,snmp,available]?[tag="cam_id:{#CAM.ID}"]))=0)*4
                   )
               description: |
                 Same combined health score as 'Status (combined)', except
                 values 0 (OK) and -1 (disabled) are discarded in
-                preprocessing — only fault-state values (1, 2, 3) are
+                preprocessing — only fault-state values (1..7) are
                 ever recorded. Drives the dashboard Honeycomb so it
                 shows zero cells when everything is healthy.
               valuemap:
@@ -758,6 +770,36 @@ zabbix_export:
                   value: '{#CAM.NAME}'
                 - tag: component
                   value: camera
+            - uuid: 6b3d1c9a8f4242b39e0a8e0fcf317e22
+              name: 'Cam [{#CAM.NAME}]: Recording server id'
+              type: DEPENDENT
+              key: 'milestone.cam.rsid[{#CAM.ID}]'
+              value_type: CHAR
+              description: |
+                Recording-server GUID this camera lives on (the
+                grandparent of the camera in the XProtect tree:
+                ManagementServer > RecordingServer > Hardware >
+                Camera). Stamped by milestone_cameras_state.py from
+                hw.relations.parent.id. Empty if the API version
+                doesn't expose it.
+
+                Used by the surveillance dashboard's Sites tab to
+                attribute camera groups to their hosting recording
+                server (group → cameras → RS).
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.recordingServerId
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 1h
+              master_item:
+                key: 'milestone.cam.raw[{#CAM.ID}]'
+              tags:
+                - tag: camera
+                  value: '{#CAM.NAME}'
+                - tag: component
+                  value: camera
             - uuid: 9ece2ec4ba874c549d87dcd5af519e52
               name: 'Cam [{#CAM.NAME}]: Status (combined)'
               type: CALCULATED
@@ -767,13 +809,37 @@ zabbix_export:
               params: |
                 (last(//milestone.cam.enabled[{#CAM.ID}])="false")*-1
                 + (last(//milestone.cam.enabled[{#CAM.ID}])="true")*(
-                    (last(//icmpping[{#CAM.ADDRESS}])=0)*2
+                    (max(last_foreach(/*/icmpping?[tag="cam_id:{#CAM.ID}"]))=0)*2
                     + (length(last(//milestone.cam.ess.comm.type[{#CAM.ID}]))>0
                        and last(//milestone.cam.ess.comm.type[{#CAM.ID}])<>"{$MILESTONE.ESS.TYPE.COMMUNICATION_OK}")*1
+                    + (max(last_foreach(/*/zabbix[host,snmp,available]?[tag="cam_id:{#CAM.ID}"]))=0)*4
                   )
               description: |
-                Combined health score for honeycomb display. See item
-                prototype comments in the template for value meaning.
+                Combined health score for honeycomb display, folding
+                three independent signals into one value:
+
+                  bit 0 (+1)  ESS communication state != OK GUID
+                  bit 1 (+2)  ICMP unreachable
+                  bit 2 (+4)  SNMP availability = 0 (down)
+
+                Values:
+                  -1  Disabled in XProtect
+                   0  OK (all three signals OK)
+                   1  ESS comm fault only
+                   2  ICMP unreachable, ESS still OK
+                   3  Offline (ICMP + ESS)
+                   4  SNMP fault only (ping + ESS OK)
+                   5  SNMP + ESS fault
+                   6  SNMP + ICMP fault
+                   7  Offline (all three down)
+
+                Cross-host items are looked up via the cam_id tag the
+                host_prototype stamps on every per-camera Zabbix host
+                (G4 + G23). last() with the ?[tag="..."] selector
+                returns the value from the single matching host;
+                zabbix[host,snmp,available] there reports 0 (down),
+                1 (up), or 2 (unknown — no SNMP items configured, no
+                penalty applied).
               valuemap:
                 name: 'Camera status'
               tags:
@@ -807,20 +873,67 @@ zabbix_export:
                 than the "Started" GUID. Requires
                 {$MILESTONE.ESS.TYPE.RECORDING_STARTED} and
                 {$MILESTONE.ESS.STATEGROUP.RECORDING} to be set.
-            - uuid: 8e37ed899b114140bd286f36d87c6567
-              expression: 'max(/Milestone XProtect by HTTP/icmpping[{#CAM.ADDRESS}],#3)=0 and last(/Milestone XProtect by HTTP/milestone.cam.enabled[{#CAM.ID}])="true"'
-              name: 'Cam [{#CAM.NAME}]: unreachable by ICMP'
-              status: DISABLED
-              priority: HIGH
-              description: |
-                DISABLED by default — see note above. Use the dashboard's
-                Camera Status honeycomb widget to view ICMP reachability.
-                Three consecutive ICMP pings to the camera's address
-                ({#CAM.ADDRESS}) have all failed and the camera is enabled
-                in XProtect. This may indicate a network or power issue
-                rather than a Milestone configuration problem.
+            # The "unreachable by ICMP" trigger prototype that lived here in
+            # v1.0 has MOVED to the per-camera host template
+            # 'Milestone Camera by Direct Polling' (per Plan v1.2 §A.5).
+            # Severity downgraded there to INFORMATION (G14) — the canonical
+            # "camera offline" alert is the milestone.cam.alarm calc item
+            # above, which folds ICMP + enabled + ESS state.
           master_item:
             key: 'milestone_cameras_read.sh[3600]'
+          host_prototypes:
+            - uuid: 481d66ed2de544388bc481cd69a1679d
+              host: 'Camera-{#CAM.HW.ID}'
+              name: '{#CAM.HW.NAME} ({#CAM.HW.IP})'
+              group_links:
+                - group:
+                    name: 'Discovered hosts/Milestone Cameras'
+              templates:
+                - name: 'Milestone Camera by Direct Polling'
+              interfaces:
+                # SNMP interface only - no Zabbix agent runs on the camera.
+                # ICMP simple checks (icmpping/icmppingloss/icmppingsec from
+                # the per-camera template) use whichever interface is
+                # primary on the host, which here is the SNMP one. They
+                # poll the IP regardless of interface type.
+                - type: SNMP
+                  useip: 'YES'
+                  ip: '{#CAM.HW.IP}'
+                  dns: ''
+                  port: '161'
+                  details:
+                    version: SNMPV2
+                    community: '{$MS.CAM.SNMP.COMMUNITY}'
+                    bulk: 'YES'
+              tags:
+                - tag: cam_id
+                  value: '{#CAM.ID}'
+                - tag: cam_hw_id
+                  value: '{#CAM.HW.ID}'
+                - tag: vendor
+                  value: '{#CAM.HW.VENDOR}'
+                - tag: site
+                  value: '{$MILESTONE.SITE.NAME}'
+              custom_interfaces: 'YES'
+          overrides:
+            # Bucket A/B/C bosch cameras (~2,400 of ~2,461 in pilot fleet) get
+            # the Bosch vendor sub-template additionally linked. Other
+            # vendors (Axis, Hanwha, …) ship as future sub-templates.
+            - name: 'Link Bosch sub-template for Bosch cameras'
+              step: '1'
+              filter:
+                evaltype: AND
+                conditions:
+                  - macro: '{#CAM.HW.VENDOR}'
+                    value: '^bosch$'
+                    operator: MATCHES_REGEX
+                    formulaid: A
+              operations:
+                - operationobject: HOST_PROTOTYPE
+                  operator: REGEXP
+                  value: '^Camera-'
+                  templates:
+                    - name: 'Milestone Camera vendor - Bosch'
           lld_macro_paths:
             - lld_macro: '{#CAM.ADDRESS}'
               path: $.address
@@ -832,10 +945,47 @@ zabbix_export:
               path: $.mac
             - lld_macro: '{#CAM.NAME}'
               path: $.displayName
+            - lld_macro: '{#CAM.HW.ID}'
+              path: $.hardwareId
+            - lld_macro: '{#CAM.HW.NAME}'
+              path: $.hardwareName
+            - lld_macro: '{#CAM.HW.MODEL}'
+              path: $.hardwareModel
+            - lld_macro: '{#CAM.HW.IP}'
+              path: $.address
+            - lld_macro: '{#CAM.HW.VENDOR}'
+              path: $.vendor
           preprocessing:
             - type: JSONPATH
               parameters:
                 - '$.__array[*]'
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  // Synthesise per-camera 'vendor' field from hardwareModel
+                  // so the host_prototype LLD override can gate the Bosch
+                  // sub-template on it. Regex is case-insensitive and
+                  // prefix-tolerant (per M0_Bosch_Fleet_Compatibility.md
+                  // §2 — fleet model strings include 'Bosch ', 'BOSCH ',
+                  // and no-prefix variants of the same physical model).
+                  var arr = JSON.parse(value);
+                  for (var i = 0; i < arr.length; i++) {
+                    var m = String(arr[i].hardwareModel || '').toLowerCase();
+                    if (/^(?:bosch\s+)?(?:flexidome|dinion|autodome|nbn|nde|ndp|nds|ndv|nin|nbe|ntc)/.test(m)) {
+                      arr[i].vendor = 'bosch';
+                    } else if (/axis/.test(m)) {
+                      arr[i].vendor = 'axis';
+                    } else if (/hanwha|samsung/.test(m)) {
+                      arr[i].vendor = 'hanwha';
+                    } else if (/hikvision|hik\b/.test(m)) {
+                      arr[i].vendor = 'hikvision';
+                    } else if (/dahua/.test(m)) {
+                      arr[i].vendor = 'dahua';
+                    } else {
+                      arr[i].vendor = 'other';
+                    }
+                  }
+                  return JSON.stringify(arr);
         - uuid: 3f88ab587d5048fd8698550a4f951d01
           name: 'Milestone: Recording Server discovery'
           type: DEPENDENT
@@ -998,6 +1148,125 @@ zabbix_export:
             - type: JSONPATH
               parameters:
                 - '$.[*]'
+        - uuid: 4a3e6d2c19b7402a83b1ce8d27f455a1
+          name: 'Milestone: Camera group discovery'
+          type: DEPENDENT
+          key: milestone.groups.discovery
+          filter:
+            evaltype: AND
+            conditions:
+              - macro: '{#GRP.NAME}'
+                value: '{$MILESTONE.GRP.NAME.MATCHES}'
+              - macro: '{#GRP.NAME}'
+                value: '{$MILESTONE.GRP.NAME.NOT_MATCHES}'
+                operator: NOT_MATCHES_REGEX
+          lifetime: 7d
+          description: |
+            Discovers Milestone camera groups (the "sites" axis Smart
+            Client uses). Each group becomes a row with cameraCount /
+            hardwareCount surfaced as dependent items below.
+
+            No host_prototype here by design (Plan v1.3, operator
+            choice) — groups are organisational, not addressable
+            hosts, so they live as LLD items only.
+          item_prototypes:
+            - uuid: 9c52a13bf0e84217a4c8f0d6b2e3915c
+              name: 'Group [{#GRP.NAME}]: Detail (per-group dependent master)'
+              type: DEPENDENT
+              key: 'milestone.grp.raw[{#GRP.ID}]'
+              history: '0'
+              value_type: TEXT
+              description: |
+                Extracts this group's record from the batch master. Per-
+                field items below depend on this so value-cache lookups
+                stay local — same pattern as milestone.cam.raw and
+                milestone.rs.raw.
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$["{#GRP.ID}"]'
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 1h
+              master_item:
+                key: 'milestone_groups_read.sh[3600]'
+              tags:
+                - tag: component
+                  value: group
+                - tag: group
+                  value: '{#GRP.NAME}'
+            - uuid: ad7e9c3b5f6a4180b1c2eafd57293ee0
+              name: 'Group [{#GRP.NAME}]: Name'
+              type: DEPENDENT
+              key: 'milestone.grp.name[{#GRP.ID}]'
+              value_type: CHAR
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.name
+              master_item:
+                key: 'milestone.grp.raw[{#GRP.ID}]'
+              tags:
+                - tag: component
+                  value: group
+                - tag: group
+                  value: '{#GRP.NAME}'
+            - uuid: c8b5e9d72143460faa9f31de8b76c104
+              name: 'Group [{#GRP.NAME}]: Camera count'
+              type: DEPENDENT
+              key: 'milestone.grp.cam.count[{#GRP.ID}]'
+              value_type: UNSIGNED
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.cameraCount
+              master_item:
+                key: 'milestone.grp.raw[{#GRP.ID}]'
+              tags:
+                - tag: component
+                  value: group
+                - tag: group
+                  value: '{#GRP.NAME}'
+            - uuid: e7f1c8b3d2904e95a5d4e6c19b8a3f7d
+              name: 'Group [{#GRP.NAME}]: Hardware count'
+              type: DEPENDENT
+              key: 'milestone.grp.hw.count[{#GRP.ID}]'
+              value_type: UNSIGNED
+              description: |
+                Distinct parent-hardware count for cameras in this
+                group. Multi-channel encoders share a hardware row, so
+                hardwareCount <= cameraCount for groups that include
+                encoder channels.
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.hardwareCount
+              master_item:
+                key: 'milestone.grp.raw[{#GRP.ID}]'
+              tags:
+                - tag: component
+                  value: group
+                - tag: group
+                  value: '{#GRP.NAME}'
+          master_item:
+            key: 'milestone_groups_read.sh[3600]'
+          lld_macro_paths:
+            - lld_macro: '{#GRP.ID}'
+              path: $.id
+            - lld_macro: '{#GRP.NAME}'
+              path: $.name
+            - lld_macro: '{#GRP.PATH}'
+              path: $.path
+            - lld_macro: '{#GRP.PARENT_ID}'
+              path: $.parentGroupId
+            - lld_macro: '{#GRP.CAMERA_COUNT}'
+              path: $.cameraCount
+            - lld_macro: '{#GRP.HARDWARE_COUNT}'
+              path: $.hardwareCount
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.__array[*]'
       macros:
         - macro: '{$MILESTONE.CAM.NAME.MATCHES}'
           value: '.*'
@@ -1005,6 +1274,12 @@ zabbix_export:
         - macro: '{$MILESTONE.CAM.NAME.NOT_MATCHES}'
           value: ^$
           description: 'Regex of camera names to exclude.'
+        - macro: '{$MILESTONE.GRP.NAME.MATCHES}'
+          value: '.*'
+          description: 'Regex of camera-group names to include (default all). Sites tab in the surveillance dashboard renders one row per group that matches this.'
+        - macro: '{$MILESTONE.GRP.NAME.NOT_MATCHES}'
+          value: ^$
+          description: 'Regex of camera-group names to exclude. Use to hide system / utility groups (e.g. ^System$).'
         - macro: '{$MILESTONE.CAM.PING.INTERVAL}'
           value: 1m
           description: 'ICMP ping interval for discovered cameras. Default 1m. Increase (e.g. 5m) on large sites to reduce Zabbix poller load. Valid Zabbix time suffixes: s, m, h.'
@@ -1035,6 +1310,15 @@ zabbix_export:
           description: 'http or https.'
         - macro: '{$MILESTONE.USER}'
           description: 'XProtect Basic user name.'
+        # ──────────────────────────────────────────────────────────────
+        # v1.2 additions — per-camera-host SNMP credentials + naming
+        # ──────────────────────────────────────────────────────────────
+        - macro: '{$MILESTONE.SITE.NAME}'
+          value: ''
+          description: 'Human-readable site name. Stamped onto every per-camera host as a "site" tag (per Plan v1.2 §C7 tag schema). Set to e.g. "BryantHS" / "AustinES" per-host or globally.'
+        - macro: '{$MS.CAM.SNMP.COMMUNITY}'
+          type: SECRET_TEXT
+          description: 'SNMPv1/v2c community for the per-camera host SNMP interface. Operator sets this once at the host_prototype level (template macro override on the Site host).'
       dashboards:
         - uuid: 698e3551a9f346029e3f312a95c20e5b
           name: 'Milestone XProtect overview'
@@ -1175,11 +1459,19 @@ zabbix_export:
             - value: '0'
               newvalue: OK
             - value: '1'
-              newvalue: 'ESS comm fault (ping OK)'
+              newvalue: 'ESS comm fault'
             - value: '2'
-              newvalue: 'Ping down (ESS still OK)'
+              newvalue: 'Ping down'
             - value: '3'
               newvalue: 'Offline (ping + ESS)'
+            - value: '4'
+              newvalue: 'SNMP fault'
+            - value: '5'
+              newvalue: 'SNMP + ESS fault'
+            - value: '6'
+              newvalue: 'SNMP + Ping fault'
+            - value: '7'
+              newvalue: 'Offline (all three)'
         - uuid: 6e0a21b3c8e64f24b1fdb6054f1ea8d2
           name: 'Service state'
           mappings:

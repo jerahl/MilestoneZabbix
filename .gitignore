@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~
+
+# Runtime artifacts produced by the milestone_*_refresh.sh wrappers
+# (snapshot JSON, flock files, root-level test copies of the scripts).
+# Canonical script versions live under templates/.
+/milestone_*.json
+/milestone_*.lock
+/milestone_*.sh
+/milestone_*.py

@@ -1,0 +1,136 @@
+zabbix_export:
+  version: '7.4'
+  template_groups:
+    - uuid: e0e3d912ab1b4b95832edbf237e0a911
+      name: Templates/Video
+  templates:
+    - uuid: 27dff836817e4ee989b7a6671092f617
+      template: 'Milestone Camera by Direct Polling'
+      name: 'Milestone Camera by Direct Polling'
+      description: |
+        Per-camera Zabbix host monitoring template. Provides ICMP reachability
+        for the camera's primary IP. Vendor-specific monitoring (SNMP, RCP+)
+        ships via linked vendor sub-templates (e.g. "Milestone Camera vendor -
+        Bosch") which are conditionally linked by the Site-template's Camera
+        LLD based on the discovered {#CAM.HW.VENDOR} macro.
+
+        Linked automatically by the host_prototype under the Camera LLD on
+        "Milestone XProtect by HTTP". Operators don't link this template by
+        hand.
+
+        Per AP plan G14: the ICMP-down trigger on this template is
+        INFORMATION severity only. The canonical "camera offline" operator
+        alert remains the "Combined status" calculated item on the parent
+        Site host, which folds ICMP + enabled + ESS communication state
+        into a single state.
+
+        Required macros (defaults override at host_prototype creation time):
+        - {$MS.CAM.PING.INTERVAL} - ICMP poll interval. Default 1m.
+
+        Required host interface:
+        - AGENT interface with the camera's IP as the primary address.
+          (The host_prototype creates this from {#CAM.HW.IP}.)
+      vendor:
+        name: Community
+        version: 7.4-0
+      groups:
+        - name: Templates/Video
+      items:
+        - uuid: 2f760929a1144dc5aba7365b323dfbc6
+          name: 'Cam: ICMP packet loss'
+          type: SIMPLE
+          key: 'icmppingloss'
+          delay: '{$MS.CAM.PING.INTERVAL}'
+          units: '%'
+          description: 'ICMP packet loss percentage to this camera.'
+          tags:
+            - tag: component
+              value: camera-ping
+            - tag: src
+              value: zbx
+        - uuid: a6a3f501a51a4818a81077e08b2c03bc
+          name: 'Cam: ICMP round-trip avg'
+          type: SIMPLE
+          key: 'icmppingsec'
+          value_type: FLOAT
+          delay: '{$MS.CAM.PING.INTERVAL}'
+          units: s
+          description: 'Average ICMP round-trip time to this camera.'
+          tags:
+            - tag: component
+              value: camera-ping
+            - tag: src
+              value: zbx
+        - uuid: b676398f785843f3a0022ec9a8488bd5
+          name: 'Cam: ICMP ping'
+          type: SIMPLE
+          key: 'icmpping'
+          delay: '{$MS.CAM.PING.INTERVAL}'
+          description: |
+            Basic ICMP reachability check. Per G14, an INFORMATION-severity
+            "unreachable" trigger fires on three consecutive failed pings;
+            the operator-visible alarm is the Site host's Combined status
+            calc which references this item via cross-host lookup keyed on
+            the cam_id tag.
+          valuemap:
+            name: 'Service state'
+          tags:
+            - tag: component
+              value: camera-ping
+            - tag: src
+              value: zbx
+          triggers:
+            - uuid: 1aaf373fff6743ab89d60b1c956e556b
+              expression: 'max(//icmpping,#3)=0'
+              name: 'Cam [{HOST.NAME}]: ICMP unreachable (3 consecutive)'
+              priority: INFO
+              description: |
+                Three consecutive ICMP pings failed. Severity is
+                INFORMATION by design (G14) - this is an input signal,
+                not the operator-facing alarm. The Combined status calc
+                on the parent Site host folds this + enabled + ESS state
+                into the actual offline alert.
+        - uuid: e9b1c3a25f8f4f37bc4e9d0612a8f5e1
+          name: 'Cam: SNMP availability'
+          type: INTERNAL
+          key: 'zabbix[host,snmp,available]'
+          delay: 1m
+          description: |
+            Zabbix-internal SNMP-interface availability for this camera.
+            Returns 0 (not available), 1 (available), or 2 (unknown —
+            no SNMP items configured / not yet polled).
+
+            Used by the parent Site host's combined-status calc as the
+            third signal (alongside Milestone enabled/ESS and ICMP).
+            Cameras whose linked vendor template doesn't define any
+            SNMP items will stay at 2 forever, which the combined-
+            status calc treats as "not penalised" — only an explicit
+            0 contributes to the SNMP-fault bit.
+          valuemap:
+            name: 'zabbix.host.available'
+          tags:
+            - tag: component
+              value: camera-snmp
+            - tag: src
+              value: zbx
+      macros:
+        - macro: '{$MS.CAM.PING.INTERVAL}'
+          value: 1m
+          description: 'ICMP poll interval for this camera. Default 1m. Increase to 5m on sites with >500 cameras per G12.'
+      valuemaps:
+        - uuid: bb5a2699db73410b802e0c120aa17830
+          name: 'Service state'
+          mappings:
+            - value: '0'
+              newvalue: Down
+            - value: '1'
+              newvalue: Up
+        - uuid: 4c1f7b9d3a2e4d68a17e8c4b9d2f6a5e
+          name: 'zabbix.host.available'
+          mappings:
+            - value: '0'
+              newvalue: 'not available'
+            - value: '1'
+              newvalue: available
+            - value: '2'
+              newvalue: unknown
